@@ -22,26 +22,6 @@
   //
   // Helper functions
   //
-
-  // Takes a ticker symbol, a start date and an end date, and constructs a URL for the Yahoo! stock quote API
-  function buildUrl(tickerSymbol, startDate, endDate) {
-    var startDateStr = getDateAsString(startDate);
-    var endDateStr = getDateAsString(endDate);
-    var data = 'select * from yahoo.finance.historicaldata where symbol = "' + tickerSymbol + '" and startDate = "' + startDateStr 
-        + '" and endDate = "' + endDateStr + '"';
-    var url = 'http://query.yahooapis.com/v1/public/yql?q=' + encodeURIComponent(data) + "&env=http%3A%2F%2Fdatatables.org%2Falltables.env&format=json";
-    return url;
-  }
-
-  // Gets a string representation of a date that can be used with the Yahoo! API.
-  function getDateAsString(date) {
-    return date.getUTCFullYear()  + '-' + makeTwoDigits(date.getUTCMonth() + 1) + '-' + makeTwoDigits(date.getUTCDate());
-  }
-
-  // Pads a given number with leading 0s so that there are two characters in the string. Example: makeTwoDigits(1) --> "01"
-  function makeTwoDigits(num) {
-    return num < 9 ? "0" + num.toString() : num.toString();
-  }
   
   var getElasticsearchTypeMapping = function(url, index, type){
         
@@ -53,7 +33,8 @@
       success: function(data){
                 
         _.forIn(data[index].mappings[type].properties, function(val, key){
-          // console.log('Iterating on key: ' + key + ', type: ' + elasticsearchTableauDataTypeMap[val.type]);
+          // TODO: Need to support all data types
+          // TODO: Need to support nested objects and arrays in some way
           if(_.isUndefined(elasticsearchTableauDataTypeMap[val.type])){
             return;
           }
@@ -62,12 +43,7 @@
             name: key,
             dataType: elasticsearchTableauDataTypeMap[val.type] 
           };
-         // console.log('Pushing: ', field);
-          elasticsearchFields.push(field);
-          
-            // console.log('Field names: ', _.pluck(elasticsearchFields, 'name'));
-            //tableau.headersCallback(_.pluck(elasticsearchFields, 'name'), _.pluck(elasticsearchFields, 'dataType'));
-    
+          elasticsearchFields.push(field);    
         });
         
         tableau.log('Header columns: ', JSON.stringify(elasticsearchFields));
@@ -88,23 +64,15 @@
   var myConnector = tableau.makeConnector();
 
   myConnector.getColumnHeaders = function() {
-    var fieldNames = ['Ticker', 'Day', 'Close'];
-    var fieldTypes = ['string', 'date', 'float'];
-    //tableau.headersCallback(fieldNames, fieldTypes); // tell tableau about the fields and their types
     tableau.headersCallback(_.pluck(elasticsearchFields, 'name'), _.pluck(elasticsearchFields, 'dataType'));
   };
    
   myConnector.getTableData = function(lastRecordToken) {
     
     var lastTo = parseInt(lastRecordToken) || 0;
-    var endDate = new Date();
     var connectionData = JSON.parse(tableau.connectionData);
-    // var startDate = new Date();
-    // set the start of the range to be 1 year ago
-    //startDate.setYear(endDate.getFullYear() - 1);
-    
-    //var connectionUrl = buildUrl(ticker, startDate, endDate);
        
+    // TODO: Add support to define a custom query to extract data with
     var requestData = {
       query: { match_all: {} },
       from: lastTo + 1,
@@ -121,22 +89,7 @@
         data: JSON.stringify(requestData),
         dataType: 'json',
         success: function (data) {
-            /*if (data.query.results) {
-              var quotes = data.query.results.quote;
-              var ii;
-              var toRet = [];
-              // mash the data into an array of objects
-              for (ii = 0; ii < quotes.length; ++ii) {
-                  // Each entry can be a list of values in the same order as the columns
-                  //var entry = [quotes[ii].Symbol, quotes[ii].Date, quotes[ii].Close];
-                  // or an object where the column names are the keys of the map
-                  var entry = {'Ticker': quotes[ii].Symbol, 
-                               'Day': quotes[ii].Date, 
-                               'Close': quotes[ii].Close};
-                  toRet.push(entry);
-              }
-              // Call back to tableau with the table data and the new record number (this is stored as a string)
-              tableau.dataCallback(toRet, toRet.length.toString(), false);*/
+
 			  if (data.hits.hits) {
               var hits = data.hits.hits;
               var ii;
@@ -184,13 +137,9 @@
   $(document).ready(function() {
     $("#submitButton").click(function(e) { // This event fires when a button is clicked
       e.preventDefault();
-      //var tickerSymbol = $('input[type=text]').val().trim();
-     // if (tickerSymbol) {
-      //  myConnector.setTicker(tickerSymbol);
-        //tableau.submit();
-      //}
       
-    var max_iterations = $('#inputMaxIterations').val();
+    var max_iterations = $('#inputBatchSize').val();
+    var limit = $('#inputTotalLimit').val();
     var esUrl = $('#inputElasticsearchUrl').val();
     var esIndex = $('#inputElasticsearchIndex').val();
     var esType = $('#inputElasticsearchType').val();
@@ -199,41 +148,17 @@
         elasticsearchUrl: esUrl,
         elasticsearchIndex: esIndex,
         elasticsearchType: esType,
-        batchSize:  max_iterations
+        batchSize:  max_iterations,
+        limit: limit
       });
       
       tableau.connectionName = "Elasticsearch " + esUrl + '/' + esIndex + '/' + esType;
       
+      // Retrieve the Elasticsearch mapping before we call tableau submit
+      // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
+      // asynchronously
       getElasticsearchTypeMapping(esUrl, esIndex, esType);
-      //tableau.submit();
     });
-  });
-  
-  $('#inputElasticsearchUrl').change(function(e, data){
-    var esUrl = $('#inputElasticsearchUrl').val();
-    var esIndex = $('#inputElasticsearchIndex').val();
-    var esType = $('#inputElasticsearchType').val();
-    if(esUrl && esIndex && esType){
-      getElasticsearchTypeMapping(esUrl, esIndex, esType);
-    }
-  });
-  
-  $('#inputElasticsearchIndex').change(function(e, data){
-    var esUrl = $('#inputElasticsearchUrl').val();
-    var esIndex = $('#inputElasticsearchIndex').val();
-    var esType = $('#inputElasticsearchType').val();
-    if(esUrl && esIndex && esType){
-      getElasticsearchTypeMapping(esUrl, esIndex, esType);
-    }
-  });
-  
-  $('#inputElasticsearchType').change(function(e, data){
-    var esUrl = $('#inputElasticsearchUrl').val();
-    var esIndex = $('#inputElasticsearchIndex').val();
-    var esType = $('#inputElasticsearchType').val();
-    if(esUrl && esIndex && esType){
-      getElasticsearchTypeMapping(esUrl, esIndex, esType);
-    }
   });
 
 })();
@@ -267,8 +192,12 @@
           <div>
           </div>
           <div class="form-group">
-            <label for="inputMaxIterations">Number of rows to add on every refresh</label>
-            <input type="number" class="form-control" id="inputMaxIterations" value="15" placeholder="Number of rows">
+            <label for="inputBatchSize">Batch size of per request to Elasticsearch</label>
+            <input type="number" class="form-control" id="inputBatchSize" value="15" placeholder="Batch size per request">
+          </div>
+          <div class="form-group">
+            <label for="inputTotalLimit">Total limit on number of rows to sync</label>
+            <input type="number" class="form-control" id="inputTotalLimit" value="1000" placeholder="Total limit">
           </div>
           <button id="submitButton" type="submit" class="btn btn-default">Submit</button>
         </form>
