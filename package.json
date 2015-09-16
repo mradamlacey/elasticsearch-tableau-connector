@@ -1,0 +1,19 @@
+{
+  "name": "elasticsearch-tableau-connector",
+  "version": "1.0.0",
+  "description": "Tableau Web Data Connector for Elasticsearch",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mradamlacey/elasticsearch-tableau-connector.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mradamlacey/elasticsearch-tableau-connector/issues"
+  },
+  "homepage": "https://github.com/mradamlacey/elasticsearch-tableau-connector"
+}
