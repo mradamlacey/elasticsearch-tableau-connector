@@ -75,13 +75,15 @@
     // TODO: Add support to define a custom query to extract data with
     var requestData = {
       query: { match_all: {} },
-      from: lastTo + 1,
+      from: lastTo,
       size: connectionData.batchSize
     };
     
 	var connectionUrl = connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' + 
            connectionData.elasticsearchType + '/_search';
 	
+  tableau.log('Elasticsearch query: ' + JSON.stringify(requestData));
+  
     var xhr = $.ajax({
         url: connectionUrl,
         method: 'POST',
@@ -90,27 +92,25 @@
         dataType: 'json',
         success: function (data) {
 
+        var limit = connectionData.limit ? connectionData.limit : data.hits.total;
+    
 			  if (data.hits.hits) {
               var hits = data.hits.hits;
               var ii;
               var toRet = [];
               // mash the data into an array of objects
               for (ii = 0; ii < hits.length; ++ii) {
-                  // Each entry can be a list of values in the same order as the columns
-                  //var entry = [quotes[ii].Symbol, quotes[ii].Date, quotes[ii].Close];
-                  // or an object where the column names are the keys of the map
                   
-                            var item = hits[ii]._source;
-          item._id = hits[ii]._id;
-          item._sequence = ii;
+                  var item = hits[ii]._source;
+                  item._id = hits[ii]._id;
+                  item._sequence = requestData.from + ii;
           
-                  //var entry = {'Ticker': quotes[ii]._source.PROPERTY_NAME, 
-                  //             'Day': quotes[ii]._source.MODIFIED_ON, 
-                  //             'Close': quotes[ii]._source.TOTAL_AVAIL_SF};
                   toRet.push(item);
               }
+              var nextTo = requestData.from + toRet.length;
+              
               // Call back to tableau with the table data and the new record number (this is stored as a string)
-              tableau.dataCallback(toRet, toRet.length.toString(), false);
+              tableau.dataCallback(toRet, nextTo.toString(), requestData.from + toRet.length < limit);
             } else {
               tableau.abortWithError("No results found for ticker symbol: " + ticker);
             }
@@ -179,25 +179,25 @@
         <form id="inputForm">
           <div class="form-group">
             <label for="inputElasticsearchUrl">Elasticsearch URL</label>
-            <input class="form-control" id="inputElasticsearchUrl" placeholder="Elasticsearch URL" value="http://usadcpdm63.tnd.us.cbre.net:9200">
+            <input class="form-control" id="inputElasticsearchUrl" placeholder="Elasticsearch URL">
           </div>
           <div class="form-group">
             <label for="inputElasticsearchIndex">Index Name</label>
-            <input class="form-control" id="inputElasticsearchIndex" placeholder="Name of index like 'index1'" value="rpdw">
+            <input class="form-control" id="inputElasticsearchIndex" placeholder="Name of index like 'index1'">
           </div>
           <div class="form-group">
             <label for="inputElasticsearchType">Type</label>
-            <input class="form-control" id="inputElasticsearchType" placeholder="Name of type like 'user'" value="property">
+            <input class="form-control" id="inputElasticsearchType" placeholder="Name of type like 'user'">
           </div>
           <div>
           </div>
           <div class="form-group">
             <label for="inputBatchSize">Batch size of per request to Elasticsearch</label>
-            <input type="number" class="form-control" id="inputBatchSize" value="15" placeholder="Batch size per request">
+            <input type="number" class="form-control" id="inputBatchSize" value="10" placeholder="Batch size per request">
           </div>
           <div class="form-group">
             <label for="inputTotalLimit">Total limit on number of rows to sync</label>
-            <input type="number" class="form-control" id="inputTotalLimit" value="1000" placeholder="Total limit">
+            <input type="number" class="form-control" id="inputTotalLimit" value="100" placeholder="Total limit">
           </div>
           <button id="submitButton" type="submit" class="btn btn-default">Submit</button>
         </form>
