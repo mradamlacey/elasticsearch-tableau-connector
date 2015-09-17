@@ -21,7 +21,11 @@ require('load-grunt-tasks')(grunt);
         files: [
           // triggering livereload when any files change
           'connector/*.*',
-          'bower_components/**/*.*'
+          'bower_components/**/*.*',
+          'resources/**/*.*'
+        ],
+        tasks: [
+          'build'
         ]
       },
       web: {
@@ -46,16 +50,35 @@ require('load-grunt-tasks')(grunt);
           grunt: true,
           args: ['watch:frontend']
         }, 
-		{
+		    {
           grunt: true,
           args: ['watch:web']
         }]
       },
+    },
+    copy: {
+      main: {
+        files: [
+            { src: 'bower_components/bootstrap/dist/css/bootstrap.css', dest: 'public/bootstrap.css', expand: false },
+            { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'public/bootstrap.js', expand: false },
+            { src: 'bower_components/jquery/dist/jquery.js', dest: 'public/jquery.js', expand: false },
+            { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
+            { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.min.js', expand: false },
+            { src: 'connector/elasticsearch-connector.html', dest: 'public/elasticsearch-connector.html', flatten: true, expand: false },
+            { src: 'resources/tableau.js', dest: 'public/tableau.js', expand: false },
+            { src: 'resources/elasticsearch.png', dest: 'public/elasticsearch.png', expand: false }
+        ]
+      }
     }
   });
+  
   grunt.registerTask('web', 'launch webserver and watch tasks', [
     'parallel:web',
   ]);
   
-  grunt.registerTask('default', ['web']);
+    grunt.registerTask('build', 'launch webserver and watch tasks', [
+    'parallel:web',
+  ]);
+  
+  grunt.registerTask('build', 'Build project files', ['copy:main']);
 };
