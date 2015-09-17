@@ -6,6 +6,7 @@ var app = express();
 app.use('/jquery', express.static(__dirname + '/bower_components/jquery/dist'));
 app.use('/bootstrap', express.static(__dirname + '/bower_components/bootstrap/dist'));
 app.use('/lodash', express.static(__dirname + '/bower_components/lodash'));
+app.use('/moment', express.static(__dirname + '/bower_components/moment'));
 app.use('/resources', express.static(__dirname + '/resources'));
 app.use(express.static(__dirname + '/connector'));
 

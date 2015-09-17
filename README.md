@@ -1,4 +1,4 @@
-# elasticsearch-tableau-connector
+# `elasticsearch-tableau-connector`
 Tableau Web Data Connector for Elasticsearch
 
 # Overview
