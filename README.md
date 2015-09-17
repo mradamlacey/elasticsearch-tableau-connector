@@ -21,7 +21,7 @@ node index.js
 
 And from Tableau go to 'Web Data Connector' and enter the URL of the connector on your web server:
 
-![](https://github.com/github/training-kit/blob/master/images/professortocat.png)
+![](https://github.com/mradamlacey/elasticsearch-tableau-connector/blob/master/resources/wdc_desktop_use_connector.png)
 
 ```
 http://<your web server>/elasticsearch-connector.html
@@ -32,3 +32,6 @@ If you are running this web app locally, and testing from the Tableau Web Data C
 ```
 http://localhost:3000/elasticsearch-connector.html
 ```
+
+From there you should see this connector's UI:
+![](https://github.com/mradamlacey/elasticsearch-tableau-connector/blob/master/resources/connector-form-example.png)
