@@ -15,7 +15,8 @@
   <script src="bootstrap.js" type="text/javascript"></script>
   <script src="lodash.js" type="text/javascript"></script>
   <script src="moment.min.js" type="text/javascript"></script>
-  <script src="tableau.js" type="text/javascript"></script>
+  <!-- <script src="tableau.js" type="text/javascript"></script> -->
+  <script src="https://public.tableau.com/javascripts/api/tableauwdc-1.1.0.js" type="text/javascript"></script>
 <script type="text/javascript">
  (function() {
 
@@ -23,7 +24,7 @@
     string: 'string',
     float: 'float',
     long: 'int',
-    int: 'int',
+    integer: 'int',
     date: 'date',
     boolean: 'bool'
   },
@@ -41,6 +42,7 @@
     
     $.ajax(connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' + 
            connectionData.elasticsearchType + '/_mapping', {
+      context: connectionData,
       dataType: 'json',
       beforeSend: function(xhr) { 
           if(connectionData.elasticsearchUsername){
@@ -50,7 +52,10 @@
 
         },
       success: function(data){
-                
+              
+              var connectionData = this;
+              console.log(connectionData);
+              console.log(data);  
         _.forIn(data[connectionData.elasticsearchIndex].mappings[connectionData.elasticsearchType].properties, function(val, key){
           // TODO: Need to support all data types
           // TODO: Need to support nested objects and arrays in some way
@@ -62,17 +67,30 @@
             name: key,
             dataType: elasticsearchTableauDataTypeMap[val.type] 
           };
+          // tableau.log('pushing: ' + field.name + ', ' + field.dataType);
           elasticsearchFields.push(field);    
         });
         
-        tableau.log('Header columns: ', JSON.stringify(elasticsearchFields));
+        elasticsearchFields.length = 20;
         
+        tableau.log('Number of header columns: ' + elasticsearchFields.length);
+        
+        var connectionData = updateTableauConnectionData();
+      
+        var connectionName = $('#inputConnectionName').val();
+        tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
+      
         startTime = moment();
         $('#myPleaseWait').modal('show');
         tableau.submit();
       },
       error: function(xhr, ajaxOptions, err){
-          abort("Request error, status code: " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+        if(xhr.status == 0){
+          abort('Request error, unable to connect to host or CORS request was denied');
+        }
+        else{
+          abort('Request error, status code: ' + xhr.status + '; ' + xhr.responseText + '\n' + err);
+        }          
       }
     }); 
   }
@@ -99,6 +117,7 @@
   var myConnector = tableau.makeConnector();
 
   myConnector.getColumnHeaders = function() {
+    tableau.log('Headers: ' + _.pluck(elasticsearchFields, 'name').join(', '));
     tableau.headersCallback(_.pluck(elasticsearchFields, 'name'), _.pluck(elasticsearchFields, 'dataType'));
   };
    
@@ -169,14 +188,20 @@
               totalCount = toRet[toRet.length - 1]._sequence + 1;
               
               // Call back to tableau with the table data and the new record number (this is stored as a string)
-              tableau.dataCallback(toRet, nextTo.toString(), requestData.from + toRet.length < limit);
+              var moreRecords = requestData.from + toRet.length < limit && requestData.from + toRet.length < data.hits.total;
+              tableau.dataCallback(toRet, nextTo.toString(), moreRecords);
             } else {
               abort("No results found for Elasticsearch query: " + JSON.stringify(requestData));
             }
             
         },
         error: function (xhr, ajaxOptions, err) {
+          if(xhr.status == 0){
+            abort('Request error, unable to connect to host or CORS request was denied');
+          }
+          else{
             abort("Request error, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+          }          
         }
     });
   };
@@ -230,16 +255,12 @@
         
     $("#submitButton").click(function(e) { // This event fires when a button is clicked
       e.preventDefault();
-      
-      var connectionData = updateTableauConnectionData();
-      
-      var connectionName = $('#inputConnectionName').val();
-      tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
-      
+           
       // Retrieve the Elasticsearch mapping before we call tableau submit
       // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
       // asynchronously
-      getElasticsearchTypeMapping(connectionData);
+      getElasticsearchTypeMapping(updateTableauConnectionData());
+            
     });
   });
   
@@ -262,6 +283,7 @@
         elasticsearchIndex: esIndex,
         elasticsearchType: esType,
         elasticsearchQuery: esQuery,
+        fields: elasticsearchFields,
         batchSize:  max_iterations,
         limit: limit
       };
