@@ -65,7 +65,6 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.min.js', expand: false },
             { src: 'connector/elasticsearch-connector.html', dest: 'public/elasticsearch-connector.html', flatten: true, expand: false },
-            { src: 'resources/tableau.js', dest: 'public/tableau.js', expand: false },
             { src: 'resources/elasticsearch.png', dest: 'public/elasticsearch.png', expand: false }
         ]
       }
