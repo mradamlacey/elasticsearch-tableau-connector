@@ -92,10 +92,12 @@
         
         tableau.log('Number of header columns: ' + elasticsearchFields.length);
         
-        var connectionData = updateTableauConnectionData();
+        var connectionData = getTableauConnectionData();
       
         var connectionName = $('#inputConnectionName').val();
         tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
+        
+        updateTableauConnectionData();        
       
         startTime = moment();
         $('#myPleaseWait').modal('show');
@@ -134,14 +136,19 @@
   var myConnector = tableau.makeConnector();
 
   myConnector.getColumnHeaders = function() {
-    tableau.log('Headers: ' + _.pluck(elasticsearchFields, 'name').join(', '));
-    tableau.headersCallback(_.pluck(elasticsearchFields, 'name'), _.pluck(elasticsearchFields, 'dataType'));
+    var connectionData = JSON.parse(tableau.connectionData);
+    
+    tableau.log('getColumnHeaders called, headers: ' + _.pluck(connectionData.fields, 'name').join(', '));
+  
+    tableau.headersCallback(_.pluck(connectionData.fields, 'name'), _.pluck(connectionData.fields, 'dataType'));
   };
    
   var totalCount = 0,
       searchHitsTotal = -1;
   
   myConnector.getTableData = function(lastRecordToken) {
+    
+    tableau.log('getTableData called, lastRecordToken: ' + lastRecordToken);
     
     var lastTo = parseInt(lastRecordToken) || 0;
     var connectionData = JSON.parse(tableau.connectionData);
@@ -167,13 +174,13 @@
     }
     
     // If we have any date fields - add a scripted field to the request to format the value to what Tableau expects
-    if(elasticsearchDateFields.length > 0){
+    if(connectionData.dateFields.length > 0){
         var dateFormatScriptTmpl = _.template("use( groovy.time.TimeCategory ){ new Date( doc[\"<%= field %>\"].value ).format(\"yyyy-MM-dd HH:mm:ss\") }");
     
         requestData._source = '*';
         requestData.script_fields = {};
       
-        _.each(elasticsearchDateFields, function(field){
+        _.each(connectionData.dateFields, function(field){
             var script = dateFormatScriptTmpl({field: field});
             requestData.script_fields[field] = {
                 script: script
@@ -230,10 +237,10 @@
                   
                   var item = hits[ii]._source;
                   // Copy over any formatted value to the source object
-                  _.each(elasticsearchDateFields, function(field){
+                  _.each(connectionData.dateFields, function(field){
                       item[field] = hits[ii].fields[field];
                   });
-                  _.each(elasticsearchGeoPointFields, function(field){
+                  _.each(connectionData.geoPointFields, function(field){
                       var latLonParts = item[field.name].split(', ');
                       if(latLonParts.length != 2){
                         abort('Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
@@ -272,6 +279,8 @@
   myConnector.init = function(){
     $('.no-tableau').css('display', 'none');
     $('.tableau').css('display', 'block');
+    
+    tableau.initCallback();
   }
 
   myConnector.shutdown = function(){
@@ -327,12 +336,12 @@
       // Retrieve the Elasticsearch mapping before we call tableau submit
       // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
       // asynchronously
-      getElasticsearchTypeMapping(updateTableauConnectionData());
+      getElasticsearchTypeMapping(getTableauConnectionData());
             
     });
   });
   
-  var updateTableauConnectionData = function(){
+  var getTableauConnectionData = function(){
     
     var max_iterations = parseInt($('#inputBatchSize').val()) == NaN ? 10 : parseInt($('#inputBatchSize').val());
     var limit = parseInt($('#inputTotalLimit').val()) == NaN ? null : parseInt($('#inputTotalLimit').val());
@@ -352,11 +361,29 @@
         elasticsearchType: esType,
         elasticsearchQuery: esQuery,
         fields: elasticsearchFields,
+        fieldsMap: elasticsearchFieldsMap,
+        dateFields: elasticsearchDateFields,
+        geoPointFields: elasticsearchGeoPointFields,
         batchSize:  max_iterations,
         limit: limit
       };
       
-      tableau.connectionData = JSON.stringify(connectionData);      
+      return connectionData; 
+  };
+  
+  var updateTableauConnectionData = function(updatedMap){
+    
+      var connectionData = getTableauConnectionData();
+      
+      if(updatedMap){
+          _.forIn(updateMap, function(val, key){
+              connectionData[key] = val;
+          });        
+      }
+
+      tableau.connectionData = JSON.stringify(connectionData);  
+      
+      tableau.log('Connection data: ' + tableau.connectionData);    
       return connectionData; 
   }
     
