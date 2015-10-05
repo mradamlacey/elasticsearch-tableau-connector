@@ -15,7 +15,6 @@
   <script src="bootstrap.js" type="text/javascript"></script>
   <script src="lodash.js" type="text/javascript"></script>
   <script src="moment.min.js" type="text/javascript"></script>
-  <!-- <script src="tableau.js" type="text/javascript"></script> -->
   <script src="https://public.tableau.com/javascripts/api/tableauwdc-1.1.0.js" type="text/javascript"></script>
 <script type="text/javascript">
  (function() {
@@ -26,15 +25,17 @@
     long: 'int',
     integer: 'int',
     date: 'datetime',
-    boolean: 'bool'
+    boolean: 'bool',
+    geo_point: 'string'
   },
     elasticsearchFields = [],
     elasticsearchFieldsMap = {},
     elasticsearchDateFields = [],
+    elasticsearchGeoPointFields = [],
     startTime,
     endTime;
   
-  var addElasticsearchField = function(name, esType, format){
+  var addElasticsearchField = function(name, esType, format, hasLatLon){
     
       if(_.isUndefined(elasticsearchTableauDataTypeMap[esType])){
           return;
@@ -45,6 +46,12 @@
       
       if(esType == 'date'){
           elasticsearchDateFields.push(name);
+      }
+      
+      if(esType == 'geo_point'){
+          elasticsearchGeoPointFields.push({name: name, hasLatLon: hasLatLon});
+          addElasticsearchField(name + '_latitude', 'float');
+          addElasticsearchField(name + '_longitude', 'float');
       }
   }
   
@@ -70,9 +77,8 @@
               console.log(connectionData);
               console.log(data);  
         _.forIn(data[connectionData.elasticsearchIndex].mappings[connectionData.elasticsearchType].properties, function(val, key){
-            // TODO: Need to support all data types
             // TODO: Need to support nested objects and arrays in some way
-            addElasticsearchField(key, val.type)    
+            addElasticsearchField(key, val.type, val.format, val.lat_lon)    
         });
         
         tableau.log('Number of header columns: ' + elasticsearchFields.length);
@@ -217,6 +223,15 @@
                   // Copy over any formatted value to the source object
                   _.each(elasticsearchDateFields, function(field){
                       item[field] = hits[ii].fields[field];
+                  });
+                  _.each(elasticsearchGeoPointFields, function(field){
+                      var latLonParts = item[field.name].split(', ');
+                      if(latLonParts.length != 2){
+                        abort('Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
+                        return;
+                      }
+                      item[field.name + '_latitude'] = parseFloat(latLonParts[0]);
+                      item[field.name + '_longitude'] = parseFloat(latLonParts[1]);                     
                   });
                   item._id = hits[ii]._id;
                   item._sequence = requestData.from + ii;
