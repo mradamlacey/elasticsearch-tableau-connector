@@ -119,7 +119,8 @@
     tableau.headersCallback(_.pluck(elasticsearchFields, 'name'), _.pluck(elasticsearchFields, 'dataType'));
   };
    
-  var totalCount = 0;
+  var totalCount = 0,
+      searchHitsTotal = -1;
   
   myConnector.getTableData = function(lastRecordToken) {
     
@@ -135,8 +136,8 @@
           abort("Error parsing custom query: \n" + err); 
       }
         
-        requestData.from = lastTo;
-        requestData.size = connectionData.batchSize;
+      requestData.from = lastTo;
+              
     }
     else{
         requestData = {
@@ -146,8 +147,22 @@
         };  
     }
     
+      // Figure out how many to request up to the limit or total 
+      // search result count
+      if((searchHitsTotal > -1 && lastTo + connectionData.batchSize > searchHitsTotal) ||
+         (connectionData.limit && lastTo + connectionData.batchSize > connectionData.limit)){
+        
+          var minLimit = connectionData.limit ? Math.min(connectionData.limit, searchHitsTotal) :
+                         searchHitsTotal;
+           
+          requestData.size = minLimit - lastTo;   
+      }
+      else{
+          requestData.size = connectionData.batchSize;  
+      }
+    
 	var connectionUrl = connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' + 
-           connectionData.elasticsearchType + '/_search';
+                      connectionData.elasticsearchType + '/_search';
 	
   tableau.log('Elasticsearch query: ' + JSON.stringify(requestData));
   
@@ -165,6 +180,9 @@
 
         },
         success: function (data) {
+
+        // Update the total count of the search results
+        searchHitsTotal = data.hits.total;
 
         var limit = connectionData.limit ? connectionData.limit : data.hits.total;
     
