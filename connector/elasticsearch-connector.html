@@ -25,20 +25,33 @@
     float: 'float',
     long: 'int',
     integer: 'int',
-    date: 'date',
+    date: 'datetime',
     boolean: 'bool'
   },
     elasticsearchFields = [],
+    elasticsearchFieldsMap = {},
+    elasticsearchDateFields = [],
     startTime,
     endTime;
-  //
-  // Helper functions
-  //
+  
+  var addElasticsearchField = function(name, esType, format){
+    
+      if(_.isUndefined(elasticsearchTableauDataTypeMap[esType])){
+          return;
+      }
+                  
+      elasticsearchFields.push({ name: name, dataType: elasticsearchTableauDataTypeMap[esType] });
+      elasticsearchFieldsMap[name] = { type: elasticsearchTableauDataTypeMap[esType], format: format };
+      
+      if(esType == 'date'){
+          elasticsearchDateFields.push(name);
+      }
+  }
   
   var getElasticsearchTypeMapping = function(connectionData){
         
-    elasticsearchFields.push({ name: '_id', dataType: 'string' });
-    elasticsearchFields.push({ name: '_sequence', dataType: 'int' });
+        addElasticsearchField('_id', 'string');
+        addElasticsearchField('_sequence', 'integer');
 
     $.ajax(connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' + 
            connectionData.elasticsearchType + '/_mapping', {
@@ -57,18 +70,9 @@
               console.log(connectionData);
               console.log(data);  
         _.forIn(data[connectionData.elasticsearchIndex].mappings[connectionData.elasticsearchType].properties, function(val, key){
-          // TODO: Need to support all data types
-          // TODO: Need to support nested objects and arrays in some way
-          if(_.isUndefined(elasticsearchTableauDataTypeMap[val.type])){
-            return;
-          }
-          
-          var field = {
-            name: key,
-            dataType: elasticsearchTableauDataTypeMap[val.type] 
-          };
-          // tableau.log('pushing: ' + field.name + ', ' + field.dataType);
-          elasticsearchFields.push(field);    
+            // TODO: Need to support all data types
+            // TODO: Need to support nested objects and arrays in some way
+            addElasticsearchField(key, val.type)    
         });
         
         tableau.log('Number of header columns: ' + elasticsearchFields.length);
@@ -147,6 +151,21 @@
         };  
     }
     
+    // If we have any date fields - add a scripted field to the request to format the value to what Tableau expects
+    if(elasticsearchDateFields.length > 0){
+        var dateFormatScriptTmpl = _.template("use( groovy.time.TimeCategory ){ new Date( doc[\"<%= field %>\"].value ).format(\"yyyy-MM-dd HH:mm:ss\") }");
+    
+        requestData._source = '*';
+        requestData.script_fields = {};
+      
+        _.each(elasticsearchDateFields, function(field){
+            var script = dateFormatScriptTmpl({field: field});
+            requestData.script_fields[field] = {
+                script: script
+            };
+        });
+    } 
+    
       // Figure out how many to request up to the limit or total 
       // search result count
       if((searchHitsTotal > -1 && lastTo + connectionData.batchSize > searchHitsTotal) ||
@@ -195,6 +214,10 @@
               for (ii = 0; ii < hits.length; ++ii) {
                   
                   var item = hits[ii]._source;
+                  // Copy over any formatted value to the source object
+                  _.each(elasticsearchDateFields, function(field){
+                      item[field] = hits[ii].fields[field];
+                  });
                   item._id = hits[ii]._id;
                   item._sequence = requestData.from + ii;
           
