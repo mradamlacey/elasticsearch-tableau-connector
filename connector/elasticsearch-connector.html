@@ -39,7 +39,7 @@
         
     elasticsearchFields.push({ name: '_id', dataType: 'string' });
     elasticsearchFields.push({ name: '_sequence', dataType: 'int' });
-    
+
     $.ajax(connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' + 
            connectionData.elasticsearchType + '/_mapping', {
       context: connectionData,
@@ -70,8 +70,6 @@
           // tableau.log('pushing: ' + field.name + ', ' + field.dataType);
           elasticsearchFields.push(field);    
         });
-        
-        elasticsearchFields.length = 20;
         
         tableau.log('Number of header columns: ' + elasticsearchFields.length);
         
