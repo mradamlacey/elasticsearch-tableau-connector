@@ -7,8 +7,17 @@
         .code {
             width: 50%;
             white-space: pre-wrap;
-            border: solid lightgrey 1px
+            border: solid lightgrey 1px;
         }
+        
+        .tableau {
+          display: none;
+        }
+        
+        .no-tableau {
+          display: block;
+        }
+        
     </style>
     
   <script src="jquery.js" type="text/javascript"></script>
@@ -259,6 +268,11 @@
         }
     });
   };
+  
+  myConnector.init = function(){
+    $('.no-tableau').css('display', 'none');
+    $('.tableau').css('display', 'block');
+  }
 
   myConnector.shutdown = function(){
       endTime = moment();
@@ -378,8 +392,16 @@
         </div>
       </div>
     </div>
+    
+    <div class="row no-tableau">
+      <div class="col-md-10 col-md-offset-1">
+        <div class="alert alert-info">
+        <p>Please open this URL from within Tableau</p>
+        </div>
+      </div>
+    </div>
         
-    <div class="row">
+    <div class="row tableau">
       <div class="col-md-10 col-md-offset-1">
    
         <form id="inputForm">
