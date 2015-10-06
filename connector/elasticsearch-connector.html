@@ -139,7 +139,6 @@
     var connectionData = JSON.parse(tableau.connectionData);
     
     tableau.log('getColumnHeaders called, headers: ' + _.pluck(connectionData.fields, 'name').join(', '));
-  
     tableau.headersCallback(_.pluck(connectionData.fields, 'name'), _.pluck(connectionData.fields, 'dataType'));
   };
    
@@ -241,9 +240,9 @@
                       item[field] = hits[ii].fields[field];
                   });
                   _.each(connectionData.geoPointFields, function(field){
-                      var latLonParts = item[field.name].split(', ');
+                      var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
                       if(latLonParts.length != 2){
-                        abort('Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
+                        tableau.log('Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
                         return;
                       }
                       item[field.name + '_latitude'] = parseFloat(latLonParts[0]);
@@ -295,6 +294,9 @@
       $('html, body').animate({
         scrollTop: $("#divMessage").offset().top
     }, 500);
+    
+      tableau.log('Shutdown callback...');
+      tableau.shutdownCallback();
   };
   
   tableau.registerConnector(myConnector);
