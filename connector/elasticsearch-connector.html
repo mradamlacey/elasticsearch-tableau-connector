@@ -254,7 +254,7 @@
                   toRet.push(item);
               }
               var nextTo = requestData.from + toRet.length;
-              totalCount = toRet[toRet.length - 1]._sequence + 1;
+              totalCount = toRet.length > 0 ? toRet[toRet.length - 1]._sequence + 1 : 0;
               
               // Call back to tableau with the table data and the new record number (this is stored as a string)
               var moreRecords = requestData.from + toRet.length < limit && requestData.from + toRet.length < data.hits.total;
