@@ -3,6 +3,7 @@ module.exports = function (grunt) {
 require('load-grunt-tasks')(grunt);
 
   grunt.initConfig({
+    pkg: grunt.file.readJSON('package.json'),
     express: {
       options: {
         // Override defaults here
@@ -25,7 +26,7 @@ require('load-grunt-tasks')(grunt);
           'resources/**/*.*'
         ],
         tasks: [
-          'build'
+          'build:dev'
         ]
       },
       web: {
@@ -33,6 +34,7 @@ require('load-grunt-tasks')(grunt);
           'index.js'
         ],
         tasks: [
+          'build:dev',
           'express:web'
         ],
         options: {
@@ -57,27 +59,96 @@ require('load-grunt-tasks')(grunt);
       },
     },
     copy: {
-      main: {
+      dev: {
         files: [
             { src: 'bower_components/bootstrap/dist/css/bootstrap.css', dest: 'public/bootstrap.css', expand: false },
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'public/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'public/jquery.js', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.min.js', expand: false },
-            { src: 'connector/elasticsearch-connector.html', dest: 'public/elasticsearch-connector.html', flatten: true, expand: false },
-            { src: 'resources/elasticsearch.png', dest: 'public/elasticsearch.png', expand: false }
+            { src: 'connector/elasticsearch-connector.css', dest: 'public/elasticsearch-connector.css', expand: false },
+            { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false }
+        ]
+      },
+      dist: {
+        files: [
+            { src: 'bower_components/bootstrap/dist/css/bootstrap.css', dest: 'dist-tmp/bootstrap.css', expand: false },
+            { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'dist-tmp/bootstrap.js', expand: false },
+            { src: 'bower_components/jquery/dist/jquery.js', dest: 'dist-tmp/jquery.js', expand: false },
+            { src: 'bower_components/lodash/lodash.js', dest: 'dist-tmp/lodash.js', expand: false },
+            { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.min.js', expand: false },
+            { src: 'connector/elasticsearch-connector.css', dest: 'dist-tmp/elasticsearch-connector.css', expand: false },
+            { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false }
         ]
       }
-    }
+    },
+    targethtml: {
+      dev: {
+        files: {
+          'public/elasticsearch-connector.html': 'connector/elasticsearch-connector.tmpl.html'
+        }
+      },
+      dist: {
+        files: {
+          'dist/elasticsearch-connector.html': 'connector/elasticsearch-connector.tmpl.html'
+        }
+      }
+    },
+    uglify: {
+            options: {
+                mangle: false,
+                sourceMap: true,
+                sourceMapIncludeSources: true,
+                compress: false,
+                banner: default_banner()
+            },
+            dist: {
+              files: {
+                'dist/elasticsearch-connector.min.js': [
+                        'dist-tmp/jquery*.js',
+                        'dist-tmp/bootstrap*.js',
+                        'dist-tmp/lodash*.js',
+                        'dist-tmp/moment*.js',
+                        'dist-tmp/elasticsearch-connector.js'
+                    ]
+              }
+            }
+    },
+    cssmin: {
+        options: {
+            shorthandCompacting: false,
+            roundingPrecision: -1
+         },
+         dist: {
+            files: {
+                'dist/elasticsearch-connector.min.css': ['dist-tmp/bootstrap.css', 'dist-tmp/elasticsearch-connector.css']
+            }
+         }
+      },
+      clean: {
+          dev: [ 'public'],
+          distTmp: [ 'dist-tmp'],
+          dist: [ 'dist']
+      },
   });
   
-  grunt.registerTask('web', 'launch webserver and watch tasks', [
+  grunt.registerTask('web', 'launch webserver and watch tasks', [ 'copy:dev', 'targethtml:dev',
     'parallel:web',
   ]);
   
-    grunt.registerTask('build', 'launch webserver and watch tasks', [
-    'parallel:web',
-  ]);
+  grunt.registerTask('build:dev', 'Build project files', [ 'clean:dev', 'copy:dev', 'targethtml:dev' ]);
   
-  grunt.registerTask('build', 'Build project files', ['copy:main']);
+  grunt.registerTask('build:dist', 'Build project files', [ 'clean:dist', 'copy:dist', 'targethtml:dist', 'uglify:dist', 'cssmin:dist', 'clean:distTmp' ]);
+  
 };
+
+var default_banner = function() {
+    return '/*! \n\
+ * ------ <%= pkg.name %> ------ \n\
+ * \n\
+ * @date <%= grunt.template.today("dddd, mmmm dS, yyyy, h:MM:ss TT") %> \n\
+ * @version <%= pkg.version %> \n\
+ * @copyright <%= grunt.template.today("yyyy") %> <%= pkg.author %> \n\
+ * @license <%= pkg.license %> \n\
+ */\n'
+}

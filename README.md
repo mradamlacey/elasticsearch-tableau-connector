@@ -16,9 +16,9 @@ number of hits.  The user can override the batch size to retrieve more records p
 
 # Known Issues and Limitations
 
-- At this time there appears that the Tableau framework that executes the connector will only make 6 requests for pages
+- At this time there appears that the Tableau SDK test framework that executes the connector will only make 6 requests for pages
 of data in Elasticsearch, after this a `Maximum Number of Requests Reached` error will be logged
-- Fields with `array`, `object`, or `geo_point` data types are not supported, they will be ignored
+- Fields with `array` or`object` they will be ignored
 
 # Configuration
 - You must enable CORS support in your Elasticsearch server.  Set the following setting in `elasticsearch.yml`:
@@ -34,12 +34,13 @@ CORS requests are allowed, including authorization headers.
 
 # Building and Running
 
+## Creating distribution suitable for deploying to Tableau Server
 From the command line execute:
 ```
-grunt build
+grunt build:dist
 ```
 
-This will package the connector files in the `public` folder.
+This will package the connector files in the `dist` folder, combining javascript and CSS into single files.
 
 You can run the application at the command line with grunt with:
 ```
@@ -51,9 +52,17 @@ simpy host all the connector resources but when requested stand alone will not d
 use the connector within the [Web Data Connector SDK](http://community.tableau.com/thread/178867)
 test harness, or use the connector from Tableau Desktop or Server.
 
+> Note that internally there are tasks that run the `build:dev` target, to perform HTML templating, and copy all
+source files to the `public/` source folder where the NodeJS server will serve static resources from
+
 # Usage
 
 ## Using in Tableau Desktop
+
+Build the application first:
+```
+grunt build:dev
+```
 
 Run the application, from the command line execute:
 
@@ -66,6 +75,8 @@ or from a development machine, you can run:
 grunt
 ```
 
+> This will serve the static resources from the `public/` sub folder.
+
 Make note of the URL that the connector app is running on, e.g.:
 ```
 Elasticsearch Tableau Web Data connector server listening at http://0.0.0.0:3000
@@ -74,27 +85,23 @@ Elasticsearch Tableau Web Data connector server listening at http://0.0.0.0:3000
 Simply choose the 'Web Data Connector' as your data source and enter the URL (you might need to enter
 the IP address or host name).
 
-From there ent
-
 ## Importing into Tableau Server
 
 Execute the build for this project from the command line:
 
 ```
-grunt build
+grunt build:dist
 ```
 
-For each file in the `public/` folder, import into Tableau Server by:
+For each file in the `dist/` folder, import into Tableau Server by:
 
 - Ensure the Tableau command line tools are in your PATH
-- From a command line execute the following:
+- From a command line (and your working director is the `dist/` folder) execute the following:
 
 ```
 tabadmin import_webdataconnector elasticsearch-connector.html
-tabadmin import_webdataconnector bootstrap.css
-tabadmin import_webdataconnector bootstrap.js
-tabadmin import_webdataconnector elasticsearch.png
-// other files...
+tabadmin import_webdataconnector elasticsearch-connector.min.css
+tabadmin import_webdataconnector elasticsearch-connector.js
 ```
 
 Get the URL of the `elasticsearch-connector.html` on the Tableau Server by executing:
@@ -138,3 +145,11 @@ The Elasticsearch connector UI includes the following fields:
 | Total limit on numnber of rows to sync | Integer | Limit of rows to include in extract, defaults to 100, but generally should be left blank to indicate that all matching rows should be included |
 
 The 'Submit' button will execute the extract and report the total number of rows and the executing time when completed.
+
+## Handling Elasticsearch Data Types
+
+### `geo_point`
+
+For `geo_point` fields in Elasticsearch, this connector will create two separate Tableau fields by parsing the `lat, lon` value:
+- Latitude - field will be named `<field-name>_latitude` - float type
+- Longitude - field will be named `<field-name>_longitude` - float type
