@@ -101,7 +101,7 @@ For each file in the `dist/` folder, import into Tableau Server by:
 ```
 tabadmin import_webdataconnector elasticsearch-connector.html
 tabadmin import_webdataconnector elasticsearch-connector.min.css
-tabadmin import_webdataconnector elasticsearch-connector.js
+tabadmin import_webdataconnector elasticsearch-connector.min.js
 ```
 
 Get the URL of the `elasticsearch-connector.html` on the Tableau Server by executing:
