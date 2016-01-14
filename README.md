@@ -27,10 +27,21 @@ of data in Elasticsearch, after this a `Maximum Number of Requests Reached` erro
 http.cors.enabled = true
 ```
 
-[Elasticsearch Configuration Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html)
-
 If you use some other front end HTTP proxy in front of your Elasticsearch cluster, you will need to make sure that
 CORS requests are allowed, including authorization headers.
+
+- You must also enable scripting in your cluster.  The connector adds a script in its search requests
+that formats `date` datatypes into a Tableau compatible format.
+
+Example:
+
+```yaml
+script.inline: on
+script.search: on
+```
+
+For more detailed information on Elasticsearch configuration options refer to:
+[Elasticsearch Configuration Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html)
 
 # Building and Running
 
