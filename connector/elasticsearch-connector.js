@@ -13,6 +13,8 @@
     elasticsearchFieldsMap = {},
     elasticsearchDateFields = [],
     elasticsearchGeoPointFields = [],
+    elasticsearchIndices = [],
+    elasticsearchTypes = [],
     startTime,
     endTime;
   
@@ -57,7 +59,19 @@
               var connectionData = this;
               console.log(connectionData);
               console.log(data);  
-        _.forIn(data[connectionData.elasticsearchIndex].mappings[connectionData.elasticsearchType].properties, function(val, key){
+        
+        var indexName = connectionData.elasticsearchIndex;
+        
+        // Then we selected an alias... choose the last index with a matching type name
+        // TODO: Let user choose which type from which index
+        if(data[connectionData.elasticsearchIndex] == null){
+            _.forIn(data, function(index, indexKey){
+                if(index.mappings[connectionData.elasticsearchType]){
+                    indexName = indexKey;
+                }
+            });
+        }
+        _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function(val, key){
             // TODO: Need to support nested objects and arrays in some way
             addElasticsearchField(key, val.type, val.format, val.lat_lon)    
         });
@@ -313,7 +327,164 @@
       getElasticsearchTypeMapping(getTableauConnectionData());
             
     });
+    
+    $("#inputElasticsearchIndexTypeahead").typeahead({source: function(something, cb){
+            
+            getElasticsearchIndices(function(err, indices){
+                
+                if(err){
+                    return abort(err);
+                }
+                
+                getElasticsearchAliases(function(err, aliases){
+                   
+                   if(err){
+                       return abort(err);
+                   }
+                   var sourceData = indices.concat(_.uniq(aliases));
+                   
+                   // Return the actual list of items to the control
+                   cb(sourceData);                    
+                });
+                
+            });
+        }, 
+        autoSelect: true,
+        showHintOnFocus: true,
+        items: 'all' });
+            
+    $("#inputElasticsearchTypeTypeahead").typeahead({source:function(something, cb){
+        
+        var connectionData = getTableauConnectionData();
+            getElasticsearchTypes(connectionData.elasticsearchIndex, function(err, types){
+               if(err){
+                   return abort(err);
+               } 
+               
+               // Return the actual list of items to the control
+               cb(types);  
+            });       
+        }, 
+        autoSelect: true,
+        showHintOnFocus: true,
+        items: 'all' });
   });
+  
+  var getElasticsearchTypes = function (indexName, cb) {
+
+      var connectionData = getTableauConnectionData();
+      var connectionUrl = connectionData.elasticsearchUrl + '/' + indexName + '/_mapping';
+
+      var xhr = $.ajax({
+          url: connectionUrl,
+          method: 'GET',
+          contentType: 'application/json',
+          dataType: 'json',
+          beforeSend: function (xhr) {
+              if (connectionData.elasticsearchUsername) {
+                  xhr.setRequestHeader("Authorization", "Basic " +
+                      btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
+              }
+
+          },
+          success: function (data) {
+
+              var indices = _.keys(data);
+              var typeMap = {};
+              
+              var esTypes = [];
+              
+              _.each(indices, function(index){
+                  var types = _.keys(data[index].mappings);
+                  
+                  esTypes = esTypes.concat(types);
+              });
+
+              cb(null, esTypes);
+          },
+          error: function (xhr, ajaxOptions, err) {
+              if (xhr.status == 0) {
+                  cb('Request error, unable to connect to host or CORS request was denied');
+              }
+              else {
+                  cb("Request error, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+              }
+          }
+      });
+  }
+  
+  var getElasticsearchIndices = function(cb){
+      
+      var connectionData = getTableauConnectionData();
+      var connectionUrl = connectionData.elasticsearchUrl + '/_cat/indices';
+
+      var xhr = $.ajax({
+          url: connectionUrl,
+          method: 'GET',
+          contentType: 'application/json',
+          dataType: 'json',
+          beforeSend: function (xhr) {
+              if (connectionData.elasticsearchUsername) {
+                  xhr.setRequestHeader("Authorization", "Basic " +
+                      btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
+              }
+
+          },
+          success: function (data) {
+
+              var indices = _.pluck(data, 'index');
+
+              cb(null, indices);
+          },
+          error: function (xhr, ajaxOptions, err) {
+              if (xhr.status == 0) {
+                  cb('Request error, unable to connect to host or CORS request was denied');
+              }
+              else {
+                  cb("Request error, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+              }
+          }
+      });
+  }
+  
+    var getElasticsearchAliases = function(cb){
+      
+      var connectionData = getTableauConnectionData();
+      var connectionUrl = connectionData.elasticsearchUrl + '/_aliases';
+
+      var xhr = $.ajax({
+          url: connectionUrl,
+          method: 'GET',
+          contentType: 'application/json',
+          dataType: 'json',
+          beforeSend: function (xhr) {
+              if (connectionData.elasticsearchUsername) {
+                  xhr.setRequestHeader("Authorization", "Basic " +
+                      btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
+              }
+
+          },
+          success: function (data) {
+
+              var aliasMap = {},
+                  aliases = [];
+                  
+              _.forIn(data, function(value, key){
+                  aliases = aliases.concat(_.keys(value.aliases));
+              });
+
+              cb(null, aliases);
+          },
+          error: function (xhr, ajaxOptions, err) {
+              if (xhr.status == 0) {
+                  cb('Request error, unable to connect to host or CORS request was denied');
+              }
+              else {
+                  cb("Request error, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+              }
+          }
+      });
+  }
   
   var getTableauConnectionData = function(){
     
@@ -323,8 +494,8 @@
     var username = $('#inputUsername').val();
     var password = $('#inputPassword').val();
     var esUrl = $('#inputElasticsearchUrl').val();
-    var esIndex = $('#inputElasticsearchIndex').val();
-    var esType = $('#inputElasticsearchType').val();
+    var esIndex = $('#inputElasticsearchIndexTypeahead').val();
+    var esType = $('#inputElasticsearchTypeTypeahead').val();
     var esQuery = $('#textElasticsearchQuery').val();
     
     var connectionData = {

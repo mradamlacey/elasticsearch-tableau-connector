@@ -67,7 +67,8 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.min.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'public/elasticsearch-connector.css', expand: false },
-            { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false }
+            { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false },
+            { src: 'resources/bootstrap3-typeahead.js', dest: 'public/bootstrap3-typeahead.js', expand: false }
         ]
       },
       dist: {
@@ -78,7 +79,8 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/lodash/lodash.js', dest: 'dist-tmp/lodash.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.min.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'dist-tmp/elasticsearch-connector.css', expand: false },
-            { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false }
+            { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false },
+            { src: 'resources/bootstrap3-typeahead.js', dest: 'dist-tmp/bootstrap3-typeahead.js', expand: false }
         ]
       }
     },
@@ -106,7 +108,8 @@ require('load-grunt-tasks')(grunt);
               files: {
                 'dist/elasticsearch-connector.min.js': [
                         'dist-tmp/jquery*.js',
-                        'dist-tmp/bootstrap*.js',
+                        'dist-tmp/bootstrap.js',
+                        'dist-tmp/bootstrap3-typeahead.js',
                         'dist-tmp/lodash*.js',
                         'dist-tmp/moment*.js',
                         'dist-tmp/elasticsearch-connector.js'
