@@ -416,7 +416,7 @@
   var getElasticsearchIndices = function(cb){
       
       var connectionData = getTableauConnectionData();
-      var connectionUrl = connectionData.elasticsearchUrl + '/_cat/indices';
+      var connectionUrl = connectionData.elasticsearchUrl + '/_mapping';
 
       var xhr = $.ajax({
           url: connectionUrl,
@@ -432,7 +432,7 @@
           },
           success: function (data) {
 
-              var indices = _.pluck(data, 'index');
+              var indices = _.keys(data);
 
               cb(null, indices);
           },
