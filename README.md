@@ -53,7 +53,9 @@ grunt build:dist
 
 This will package the connector files in the `dist` folder, combining javascript and CSS into single files.
 
-You can run the application at the command line with grunt with:
+## Building and running from local development environment
+
+You can build, watch sources for changes, and run the application at the command line with grunt with:
 ```
 grunt
 ```
@@ -66,35 +68,12 @@ test harness, or use the connector from Tableau Desktop or Server.
 > Note that internally there are tasks that run the `build:dev` target, to perform HTML templating, and copy all
 source files to the `public/` source folder where the NodeJS server will serve static resources from
 
-# Usage
-
-## Using in Tableau Desktop
-
-Build the application first:
-```
-grunt build:dev
-```
-
-Run the application, from the command line execute:
-
-```
-node index.js
-```
-
-or from a development machine, you can run:
-```
-grunt
-```
-
-> This will serve the static resources from the `public/` sub folder.
-
 Make note of the URL that the connector app is running on, e.g.:
 ```
 Elasticsearch Tableau Web Data connector server listening at http://0.0.0.0:3000
 ```
 
-Simply choose the 'Web Data Connector' as your data source and enter the URL (you might need to enter
-the IP address or host name).
+Simply choose the 'Web Data Connector' as your data source from within Tableau Desktop, or use the Web Connector SDK and enter the URL..
 
 ## Importing into Tableau Server
 

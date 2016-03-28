@@ -139,10 +139,11 @@ require('load-grunt-tasks')(grunt);
     'parallel:web',
   ]);
   
-  grunt.registerTask('build:dev', 'Build project files', [ 'clean:dev', 'copy:dev', 'targethtml:dev' ]);
+  grunt.registerTask('build:dev', 'Build project, and watch sources for changes, run local webserver', [ 'clean:dev', 'copy:dev', 'targethtml:dev' ]);
   
-  grunt.registerTask('build:dist', 'Build project files', [ 'clean:dist', 'copy:dist', 'targethtml:dist', 'uglify:dist', 'cssmin:dist', 'clean:distTmp' ]);
+  grunt.registerTask('build:dist', 'Build and create distribution', [ 'clean:dist', 'copy:dist', 'targethtml:dist', 'uglify:dist', 'cssmin:dist', 'clean:distTmp' ]);
   
+  grunt.registerTask('default', 'Build project, and watch sources for changes, run local webserver', [ 'build:dev', 'web' ]);
 };
 
 var default_banner = function() {
