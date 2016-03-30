@@ -75,6 +75,23 @@ Elasticsearch Tableau Web Data connector server listening at http://0.0.0.0:3000
 
 Simply choose the 'Web Data Connector' as your data source from within Tableau Desktop, or use the Web Connector SDK and enter the URL..
 
+## Running using Docker
+
+A `Dockerfile` is supplied in `docker/Dockerfile` that will build an image that creates a development build of the
+latest source from Github, and runs the node server.
+
+You can build an image from the root of the project:
+
+```
+docker build docker -t <name of tag>
+```
+
+and can then start a container, which will map the server to the host's port 3000 from this image with:
+
+```
+docker run <name of tag> -p 3000:3000
+```
+
 ## Importing into Tableau Server
 
 Execute the build for this project from the command line:
