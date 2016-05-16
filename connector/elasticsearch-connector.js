@@ -39,7 +39,9 @@
   }
   
   var getElasticsearchTypeMapping = function(connectionData){
-        
+
+      tableau.log('Calling getElasticsearchTypeMapping');
+
         addElasticsearchField('_id', 'string');
         addElasticsearchField('_sequence', 'integer');
 
@@ -48,7 +50,7 @@
       context: connectionData,
       dataType: 'json',
       beforeSend: function(xhr) { 
-          if(connectionData.elasticsearchUsername){
+          if(connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername){
               xhr.setRequestHeader("Authorization", "Basic " + 
                 btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));             
           }
@@ -122,7 +124,17 @@
   var myConnector = tableau.makeConnector();
 
   myConnector.getColumnHeaders = function() {
-    var connectionData = JSON.parse(tableau.connectionData);
+
+      var connectionData;
+
+      try{
+          connectionData = JSON.parse(tableau.connectionData);
+      }
+      catch(ex){
+          abort("Error parsing tableau connection data: \n", ex);
+          return;
+      }
+
     
     tableau.log('getColumnHeaders called, headers: ' + _.pluck(connectionData.fields, 'name').join(', '));
     tableau.headersCallback(_.pluck(connectionData.fields, 'name'), _.pluck(connectionData.fields, 'dataType'));
@@ -144,7 +156,8 @@
           requestData = JSON.parse(connectionData.elasticsearchQuery); 
       }
       catch(err){
-          abort("Error parsing custom query: \n" + err); 
+          abort("Error parsing custom query: \n" + err);
+          return;
       }
         
       requestData.from = lastTo;
@@ -159,6 +172,7 @@
     }
     
     // If we have any date fields - add a scripted field to the request to format the value to what Tableau expects
+
     if(connectionData.dateFields.length > 0){
         var dateFormatScriptTmpl = _.template("use( groovy.time.TimeCategory ){ new Date( doc[\"<%= field %>\"].value ).format(\"yyyy-MM-dd HH:mm:ss\") }");
     
@@ -171,7 +185,7 @@
                 script: script
             };
         });
-    } 
+    }
     
       // Figure out how many to request up to the limit or total 
       // search result count
@@ -199,7 +213,7 @@
         data: JSON.stringify(requestData),
         dataType: 'json',
         beforeSend: function(xhr) { 
-          if(connectionData.elasticsearchUsername){
+          if(connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername){
               xhr.setRequestHeader("Authorization", "Basic " + 
                 btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));             
           }
@@ -224,6 +238,7 @@
                   // Copy over any formatted value to the source object
                   _.each(connectionData.dateFields, function(field){
                       item[field] = hits[ii].fields[field];
+                      //item[field] = moment(item[field]).format('YYYY-MM-DD HH:mm:ss');
                   });
                   _.each(connectionData.geoPointFields, function(field){
                       var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
@@ -381,7 +396,7 @@
           contentType: 'application/json',
           dataType: 'json',
           beforeSend: function (xhr) {
-              if (connectionData.elasticsearchUsername) {
+              if (connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername) {
                   xhr.setRequestHeader("Authorization", "Basic " +
                       btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
               }
@@ -424,7 +439,7 @@
           contentType: 'application/json',
           dataType: 'json',
           beforeSend: function (xhr) {
-              if (connectionData.elasticsearchUsername) {
+              if (connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername) {
                   xhr.setRequestHeader("Authorization", "Basic " +
                       btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
               }
@@ -458,7 +473,7 @@
           contentType: 'application/json',
           dataType: 'json',
           beforeSend: function (xhr) {
-              if (connectionData.elasticsearchUsername) {
+              if (connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername) {
                   xhr.setRequestHeader("Authorization", "Basic " +
                       btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
               }
@@ -491,6 +506,7 @@
     var max_iterations = parseInt($('#inputBatchSize').val()) == NaN ? 10 : parseInt($('#inputBatchSize').val());
     var limit = parseInt($('#inputTotalLimit').val()) == NaN ? null : parseInt($('#inputTotalLimit').val());
     var connectionName = $('#inputConnectionName').val();
+    var auth = $('#cbUseBasicAuth').is(':checked');
     var username = $('#inputUsername').val();
     var password = $('#inputPassword').val();
     var esUrl = $('#inputElasticsearchUrl').val();
@@ -500,6 +516,7 @@
     
     var connectionData = {
         elasticsearchUrl: esUrl,
+        elasticsearchAuthenticate: auth,
         elasticsearchUsername: username,
         elasticsearchPassword: password,
         elasticsearchIndex: esIndex,

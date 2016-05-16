@@ -65,7 +65,7 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'public/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'public/jquery.js', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
-            { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.min.js', expand: false },
+            { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'public/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'public/bootstrap3-typeahead.js', expand: false }
@@ -77,7 +77,7 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'dist-tmp/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'dist-tmp/jquery.js', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'dist-tmp/lodash.js', expand: false },
-            { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.min.js', expand: false },
+            { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'dist-tmp/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'dist-tmp/bootstrap3-typeahead.js', expand: false }

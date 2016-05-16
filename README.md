@@ -24,7 +24,15 @@ of data in Elasticsearch, after this a `Maximum Number of Requests Reached` erro
 - You must enable CORS support in your Elasticsearch server.  Set the following setting in `elasticsearch.yml`:
 
 ```yaml
-http.cors.enabled = true
+http.cors.enabled: true
+```
+
+Additionally, in current versions of Elasticsearch (2.3+), it is required to define which origins
+are allowed to send CORS requests (this is defined by the `origin` HTTP request header).  The following configuration in `elasticsearch.yml` will allow _ALL_ origins but is
+considered insecure:
+
+```yaml
+http.cors.allow-origin: "*"
 ```
 
 If you use some other front end HTTP proxy in front of your Elasticsearch cluster, you will need to make sure that
@@ -45,6 +53,26 @@ For more detailed information on Elasticsearch configuration options refer to:
 
 # Building and Running
 
+## Pre-requisites
+
+Install grunt:
+```
+npm install -g grunt
+```
+
+Install bower:
+```
+npm install -g bower
+```
+
+## Install dependencies
+
+Run the following from the command line:
+```
+npm install
+bower install
+```
+
 ## Creating distribution suitable for deploying to Tableau Server
 From the command line execute:
 ```
@@ -61,7 +89,7 @@ grunt
 ```
 
 This will watch all sub-directories for changes and reload the application if anything changes.  Running this app will
-simpy host all the connector resources but when requested stand alone will not do anything useful.  You should either 
+simply host all the connector resources but when requested stand alone will not do anything useful.  You should either
 use the connector within the [Web Data Connector SDK](http://community.tableau.com/thread/178867)
 test harness, or use the connector from Tableau Desktop or Server.
 
