@@ -177,23 +177,7 @@
             size: connectionData.batchSize
         };  
     }
-    
-    // If we have any date fields - add a scripted field to the request to format the value to what Tableau expects
 
-    if(connectionData.dateFields.length > 0){
-        var dateFormatScriptTmpl = _.template("use( groovy.time.TimeCategory ){ new Date( doc[\"<%= field %>\"].value ).format(\"yyyy-MM-dd HH:mm:ss\") }");
-    
-        requestData._source = '*';
-        requestData.script_fields = {};
-      
-        _.each(connectionData.dateFields, function(field){
-            var script = dateFormatScriptTmpl({field: field});
-            requestData.script_fields[field] = {
-                script: script
-            };
-        });
-    }
-    
       // Figure out how many to request up to the limit or total 
       // search result count
       if((searchHitsTotal > -1 && lastTo + connectionData.batchSize > searchHitsTotal) ||
@@ -244,8 +228,14 @@
                   var item = hits[ii]._source;
                   // Copy over any formatted value to the source object
                   _.each(connectionData.dateFields, function(field){
-                      item[field] = hits[ii].fields[field];
-                      //item[field] = moment(item[field]).format('YYYY-MM-DD HH:mm:ss');
+
+                      if(!item[field]){
+                          item[field] = null;
+                          return;
+                      }
+
+                      item[field] = moment(item[field].replace(' +', '+')
+                                                      .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
                   });
                   _.each(connectionData.geoPointFields, function(field){
                       var latLonParts = item[field.name] ? item[field.name].split(', ') : [];

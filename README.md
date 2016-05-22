@@ -38,15 +38,6 @@ http.cors.allow-origin: "*"
 If you use some other front end HTTP proxy in front of your Elasticsearch cluster, you will need to make sure that
 CORS requests are allowed, including authorization headers.
 
-- You must also enable scripting in your cluster.  The connector adds a script in its search requests
-that formats `date` datatypes into a Tableau compatible format.
-
-Example:
-
-```yaml
-script.inline: on
-script.search: on
-```
 
 For more detailed information on Elasticsearch configuration options refer to:
 [Elasticsearch Configuration Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html)
@@ -172,6 +163,9 @@ The Elasticsearch connector UI includes the following fields:
 -------------|-----------|-------------|
 | Connection Name | String | Name of the data source connection displayed in the Tableau workbook |
 | Elasticsearch URL | String | \[Required\] URL of the Elasticsearch cluster |
+| Use HTTP Basic authentication | Boolean | \[Required\] Indicates if the Elasticsearch cluster requires HTTP Basic Auth |
+| Username | String | If 'Use HTTP Basic Auth' is checked, this is the user name|
+| Password | String | If 'Use HTTP Basic Auth' is checked, this is the password |
 | Index name | String | \[Required\] Name of the index in the Elasticsearch cluster |
 | Type | String | \[Required\] Name of the type in the Elasticsearch cluster to query |
 | Use custom query? | Boolean | If true, indicates if the extract should use a custom query against Elasticsearch, if false extract will be a 'match all' |
