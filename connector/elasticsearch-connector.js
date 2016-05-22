@@ -89,7 +89,14 @@
       
         startTime = moment();
         $('#myPleaseWait').modal('show');
-        tableau.submit();
+          if(tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
+              console.log('Submitting tableau interactive phase data');
+              tableau.submit();
+          }
+          else{
+              abortWithError('Invalid phase: ' + tableau.phase + ' aborting');
+          }
+
       },
       error: function(xhr, ajaxOptions, err){
         if(xhr.status == 0){
@@ -277,8 +284,15 @@
   };
   
   myConnector.init = function(){
-    $('.no-tableau').css('display', 'none');
-    $('.tableau').css('display', 'block');
+
+      console.log('tableay:init fired');
+
+      if (tableau.phase == tableau.phaseEnum.interactivePhase){
+          $('.no-tableau').css('display', 'none');
+          $('.tableau').css('display', 'block');
+
+          initUIControls();
+      }
     
     tableau.initCallback();
   }
@@ -307,83 +321,89 @@
   //
  
   $(document).ready(function() {
-    
-    $('#cbUseQuery').change(function() {
-        if($(this).is(":checked")) {
-           $('#divQuery').css('display', 'block'); 
-        }
-        else{
-          $('#divQuery').css('display', 'none');
-          $('#inputUsername').val('');
-          $('#inputPassword').val('');
-        }   
-        
-        updateTableauConnectionData();   
-    });
 
-    $('#cbUseBasicAuth').change(function() {
-        if($(this).is(":checked")) {
-           $('.basic-auth-control').css('display', 'block'); 
-        }
-        else{
-          $('.basic-auth-control').css('display', 'none');
-          $('#textElasticsearchQuery').val('');
-        }   
-        
-        updateTableauConnectionData();   
-    });
-        
-    $("#submitButton").click(function(e) { // This event fires when a button is clicked
-      e.preventDefault();
-           
-      // Retrieve the Elasticsearch mapping before we call tableau submit
-      // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
-      // asynchronously
-      getElasticsearchTypeMapping(getTableauConnectionData());
-            
-    });
-    
-    $("#inputElasticsearchIndexTypeahead").typeahead({source: function(something, cb){
-            
-            getElasticsearchIndices(function(err, indices){
-                
-                if(err){
-                    return abort(err);
-                }
-                
-                getElasticsearchAliases(function(err, aliases){
-                   
-                   if(err){
-                       return abort(err);
-                   }
-                   var sourceData = indices.concat(_.uniq(aliases));
-                   
-                   // Return the actual list of items to the control
-                   cb(sourceData);                    
-                });
-                
-            });
-        }, 
-        autoSelect: true,
-        showHintOnFocus: true,
-        items: 'all' });
-            
-    $("#inputElasticsearchTypeTypeahead").typeahead({source:function(something, cb){
-        
-        var connectionData = getTableauConnectionData();
-            getElasticsearchTypes(connectionData.elasticsearchIndex, function(err, types){
-               if(err){
-                   return abort(err);
-               } 
-               
-               // Return the actual list of items to the control
-               cb(types);  
-            });       
-        }, 
-        autoSelect: true,
-        showHintOnFocus: true,
-        items: 'all' });
+      console.log('Document ready fired...');
+
   });
+
+     var initUIControls = function(){
+         $('#cbUseQuery').change(function() {
+             if($(this).is(":checked")) {
+                 $('#divQuery').css('display', 'block');
+             }
+             else{
+                 $('#divQuery').css('display', 'none');
+                 $('#inputUsername').val('');
+                 $('#inputPassword').val('');
+             }
+
+             updateTableauConnectionData();
+         });
+
+         $('#cbUseBasicAuth').change(function() {
+             if($(this).is(":checked")) {
+                 $('.basic-auth-control').css('display', 'block');
+             }
+             else{
+                 $('.basic-auth-control').css('display', 'none');
+                 $('#textElasticsearchQuery').val('');
+             }
+
+             updateTableauConnectionData();
+         });
+
+         $("#submitButton").click(function(e) { // This event fires when a button is clicked
+             e.preventDefault();
+
+             // Retrieve the Elasticsearch mapping before we call tableau submit
+             // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
+             // asynchronously
+             getElasticsearchTypeMapping(getTableauConnectionData());
+
+         });
+
+         $("#inputElasticsearchIndexTypeahead").typeahead({source: function(something, cb){
+
+             getElasticsearchIndices(function(err, indices){
+
+                 if(err){
+                     return abort(err);
+                 }
+
+                 getElasticsearchAliases(function(err, aliases){
+
+                     if(err){
+                         return abort(err);
+                     }
+                     var sourceData = indices.concat(_.uniq(aliases));
+
+                     // Return the actual list of items to the control
+                     cb(sourceData);
+                 });
+
+             });
+         },
+             autoSelect: true,
+             showHintOnFocus: true,
+             items: 'all' });
+
+         $("#inputElasticsearchTypeTypeahead").typeahead({source:function(something, cb){
+
+             var connectionData = getTableauConnectionData();
+             getElasticsearchTypes(connectionData.elasticsearchIndex, function(err, types){
+                 if(err){
+                     return abort(err);
+                 }
+
+                 // Return the actual list of items to the control
+                 cb(types);
+             });
+         },
+             autoSelect: true,
+             showHintOnFocus: true,
+             items: 'all' });
+
+     };
   
   var getElasticsearchTypes = function (indexName, cb) {
 
