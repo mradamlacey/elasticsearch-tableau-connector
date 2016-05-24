@@ -40,7 +40,11 @@
   
   var getElasticsearchTypeMapping = function(connectionData){
 
-      tableau.log('Calling getElasticsearchTypeMapping');
+      tableau.log('[getElasticsearchTypeMapping] invoking');
+
+      if(!connectionData.elasticsearchUrl || !connectionData.elasticsearchIndex || !connectionData.elasticsearchType){
+          return;
+      }
 
         addElasticsearchField('_id', 'string');
         addElasticsearchField('_sequence', 'integer');
@@ -50,17 +54,16 @@
       context: connectionData,
       dataType: 'json',
       beforeSend: function(xhr) { 
-          if(connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername){
+          if(connectionData.elasticsearchAuthenticate && tableau.username){
               xhr.setRequestHeader("Authorization", "Basic " + 
-                btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));             
+                btoa(tableau.username + ":" + tableau.password));
           }
 
         },
       success: function(data){
               
               var connectionData = this;
-              console.log(connectionData);
-              console.log(data);  
+              console.log('[getElasticsearchTypeMapping] ', connectionData);
         
         var indexName = connectionData.elasticsearchIndex;
         
@@ -90,7 +93,7 @@
         startTime = moment();
         $('#myPleaseWait').modal('show');
           if(tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
-              console.log('Submitting tableau interactive phase data');
+              console.log('[getElasticsearchTypeMapping] Submitting tableau interactive phase data');
               tableau.submit();
           }
           else{
@@ -149,133 +152,37 @@
    
   var totalCount = 0,
       searchHitsTotal = -1;
-  
-  myConnector.getTableData = function(lastRecordToken) {
-    
-    tableau.log('getTableData called, lastRecordToken: ' + lastRecordToken);
-    
-    var lastTo = parseInt(lastRecordToken) || 0;
-    var connectionData = JSON.parse(tableau.connectionData);
-      
-    var requestData = {}; 
-    if(connectionData.elasticsearchQuery){
-      try{
-          requestData = JSON.parse(connectionData.elasticsearchQuery); 
-      }
-      catch(err){
-          abort("Error parsing custom query: \n" + err);
-          return;
-      }
-        
-      requestData.from = lastTo;
-              
-    }
-    else{
-        requestData = {
-            query: { match_all: {} },
-            from: lastTo,
-            size: connectionData.batchSize
-        };  
-    }
 
-      // Figure out how many to request up to the limit or total 
-      // search result count
-      if((searchHitsTotal > -1 && lastTo + connectionData.batchSize > searchHitsTotal) ||
-         (connectionData.limit && lastTo + connectionData.batchSize > connectionData.limit)){
-        
-          var minLimit = connectionData.limit ? Math.min(connectionData.limit, searchHitsTotal) :
-                         searchHitsTotal;
-           
-          requestData.size = minLimit - lastTo;   
-      }
-      else{
-          requestData.size = connectionData.batchSize;  
-      }
-    
-	var connectionUrl = connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' + 
-                      connectionData.elasticsearchType + '/_search';
-	
-  tableau.log('Elasticsearch query: ' + JSON.stringify(requestData));
-  
-    var xhr = $.ajax({
-        url: connectionUrl,
-        method: 'POST',
-        processData: false,
-        data: JSON.stringify(requestData),
-        dataType: 'json',
-        beforeSend: function(xhr) { 
-          if(connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername){
-              xhr.setRequestHeader("Authorization", "Basic " + 
-                btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));             
-          }
+     myConnector.getTableData = function(lastRecordToken){
 
-        },
-        success: function (data) {
+         console.log('[getTableData] lastRecordToken: ' + lastRecordToken);
+         var connectionData = JSON.parse(tableau.connectionData);
 
-        // Update the total count of the search results
-        searchHitsTotal = data.hits.total;
+         if(connectionData.elasticsearchAuthenticate){
+             console.log('[getTableData] Using HTTP Basic Auth, username: ' +
+                 tableau.username + ', password: ' + tableau.password);
+         }
 
-        var limit = connectionData.limit ? connectionData.limit : data.hits.total;
-    
-			  if (data.hits.hits) {
-              var hits = data.hits.hits;
-              var ii;
-              var toRet = [];
-              
-              // mash the data into an array of objects
-              for (ii = 0; ii < hits.length; ++ii) {
-                  
-                  var item = hits[ii]._source;
-                  // Copy over any formatted value to the source object
-                  _.each(connectionData.dateFields, function(field){
+         // First time this is invoked
+         if(!lastRecordToken){
+             console.log('[getTableData] open search scroll window...');
+             openSearchScrollWindow(function(err, scrollId){
+                 console.log('[getTableData] opened scroll window, scroll id: ' + scrollId);
+             });
+         }
+         else{
+             console.log('[getTableData] getting next scroll result...');
 
-                      if(!item[field]){
-                          item[field] = null;
-                          return;
-                      }
+             getNextScrollResult(lastRecordToken, function(err, results){
+                 console.log('[getTableData] processed next scroll result, count: ' + results.length);
+             })
+         }
 
-                      item[field] = moment(item[field].replace(' +', '+')
-                                                      .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
-                  });
-                  _.each(connectionData.geoPointFields, function(field){
-                      var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
-                      if(latLonParts.length != 2){
-                        tableau.log('Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
-                        return;
-                      }
-                      item[field.name + '_latitude'] = parseFloat(latLonParts[0]);
-                      item[field.name + '_longitude'] = parseFloat(latLonParts[1]);                     
-                  });
-                  item._id = hits[ii]._id;
-                  item._sequence = requestData.from + ii;
-          
-                  toRet.push(item);
-              }
-              var nextTo = requestData.from + toRet.length;
-              totalCount = toRet.length > 0 ? toRet[toRet.length - 1]._sequence + 1 : 0;
-              
-              // Call back to tableau with the table data and the new record number (this is stored as a string)
-              var moreRecords = requestData.from + toRet.length < limit && requestData.from + toRet.length < data.hits.total;
-              tableau.dataCallback(toRet, nextTo.toString(), moreRecords);
-            } else {
-              abort("No results found for Elasticsearch query: " + JSON.stringify(requestData));
-            }
-            
-        },
-        error: function (xhr, ajaxOptions, err) {
-          if(xhr.status == 0){
-            abort('Request error, unable to connect to host or CORS request was denied');
-          }
-          else{
-            abort("Request error, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
-          }          
-        }
-    });
-  };
-  
+     };
+
   myConnector.init = function(){
 
-      console.log('tableay:init fired');
+      console.log('[connector.init] fired');
 
       if (tableau.phase == tableau.phaseEnum.interactivePhase){
           $('.no-tableau').css('display', 'none');
@@ -300,7 +207,7 @@
         scrollTop: $("#divMessage").offset().top
     }, 500);
     
-      tableau.log('Shutdown callback...');
+      console.log('[connector.shutdown] callback...');
       tableau.shutdownCallback();
   };
   
@@ -312,7 +219,7 @@
  
   $(document).ready(function() {
 
-      console.log('Document ready fired...');
+      console.log('[$.document.ready] fired...');
 
   });
 
@@ -398,6 +305,11 @@
   var getElasticsearchTypes = function (indexName, cb) {
 
       var connectionData = getTableauConnectionData();
+
+      if(!connectionData.elasticsearchUrl || !connectionData.elasticsearchIndex){
+          return;
+      }
+
       var connectionUrl = connectionData.elasticsearchUrl + '/' + indexName + '/_mapping';
 
       var xhr = $.ajax({
@@ -406,9 +318,9 @@
           contentType: 'application/json',
           dataType: 'json',
           beforeSend: function (xhr) {
-              if (connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername) {
+              if (connectionData.elasticsearchAuthenticate && tableau.username) {
                   xhr.setRequestHeader("Authorization", "Basic " +
-                      btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
+                      btoa(tableau.username + ":" + tableau.password));
               }
 
           },
@@ -441,6 +353,11 @@
   var getElasticsearchIndices = function(cb){
       
       var connectionData = getTableauConnectionData();
+
+      if(!connectionData.elasticsearchUrl){
+          return;
+      }
+
       var connectionUrl = connectionData.elasticsearchUrl + '/_mapping';
 
       var xhr = $.ajax({
@@ -449,9 +366,9 @@
           contentType: 'application/json',
           dataType: 'json',
           beforeSend: function (xhr) {
-              if (connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername) {
+              if (connectionData.elasticsearchAuthenticate && tableau.username) {
                   xhr.setRequestHeader("Authorization", "Basic " +
-                      btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
+                      btoa(tableau.username + ":" + tableau.password));
               }
 
           },
@@ -475,6 +392,11 @@
     var getElasticsearchAliases = function(cb){
       
       var connectionData = getTableauConnectionData();
+
+        if(!connectionData.elasticsearchUrl){
+            return;
+        }
+
       var connectionUrl = connectionData.elasticsearchUrl + '/_aliases';
 
       var xhr = $.ajax({
@@ -483,9 +405,9 @@
           contentType: 'application/json',
           dataType: 'json',
           beforeSend: function (xhr) {
-              if (connectionData.elasticsearchAuthenticate && connectionData.elasticsearchUsername) {
+              if (connectionData.elasticsearchAuthenticate && tableau.username) {
                   xhr.setRequestHeader("Authorization", "Basic " +
-                      btoa(connectionData.elasticsearchUsername + ":" + connectionData.elasticsearchPassword));
+                      btoa(tableau.username + ":" + tableau.password));
               }
 
           },
@@ -509,7 +431,178 @@
               }
           }
       });
-  }
+  };
+
+     var openSearchScrollWindow = function(cb){
+
+         var connectionData = JSON.parse(tableau.connectionData);
+
+         if(!connectionData.elasticsearchUrl){
+             return;
+         }
+
+         var requestData = {};
+         if(connectionData.elasticsearchQuery){
+             try{
+                 requestData = JSON.parse(connectionData.elasticsearchQuery);
+             }
+             catch(err){
+                 abort("Error parsing custom query: \n" + err);
+                 return;
+             }
+         }
+         else{
+             requestData = {
+                 query: { match_all: {} }
+             };
+         }
+
+         requestData.size = connectionData.batchSize;
+
+         var connectionUrl = connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' +
+             connectionData.elasticsearchType + '/_search?scroll=5m';
+
+         var xhr = $.ajax({
+             url: connectionUrl,
+             method: 'POST',
+             processData: false,
+             data: JSON.stringify(requestData),
+             dataType: 'json',
+             beforeSend: function (xhr) {
+                 if (connectionData.elasticsearchAuthenticate && tableau.username) {
+                     xhr.setRequestHeader("Authorization", "Basic " +
+                         btoa(tableau.username + ":" + tableau.password));
+                 }
+
+             },
+             success: function (data) {
+
+                 var result = processSearchResults(data);
+
+                 cb(null, result.scrollId);
+             },
+             error: function (xhr, ajaxOptions, err) {
+                 if (xhr.status == 0) {
+                     cb('Request error, unable to connect to host or CORS request was denied');
+                 }
+                 else {
+                     cb("Error creating Elasticsearch scroll window, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+                 }
+             }
+         });
+     };
+
+     var getNextScrollResult = function(scrollId, cb){
+         var connectionData = JSON.parse(tableau.connectionData);
+
+         if(!connectionData.elasticsearchUrl){
+             return;
+         }
+
+         var connectionUrl = connectionData.elasticsearchUrl + '/_search/scroll';
+
+         var requestData = {
+             scroll: '5m',
+             scroll_id: scrollId
+         };
+
+         var xhr = $.ajax({
+             url: connectionUrl,
+             method: 'POST',
+             processData: false,
+             data: JSON.stringify(requestData),
+             dataType: 'json',
+             beforeSend: function (xhr) {
+                 if (connectionData.elasticsearchAuthenticate && tableau.username) {
+                     xhr.setRequestHeader("Authorization", "Basic " +
+                         btoa(tableau.username + ":" + tableau.password));
+                 }
+
+             },
+             success: function (data) {
+                 var result = processSearchResults(data);
+
+                 if(cb){
+                     cb(null, result.results);
+                 }
+             },
+             error: function (xhr, ajaxOptions, err) {
+                 if (xhr.status == 0) {
+                     cb('Request error, unable to connect to host or CORS request was denied');
+                 }
+                 else {
+                     cb("Error creating Elasticsearch scroll window, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+                 }
+             }
+         });
+     };
+
+     var processSearchResults = function(data){
+
+         var connectionData = JSON.parse(tableau.connectionData);
+         searchHitsTotal = data.hits.total;
+
+         console.log('[processSearchResults] total search hits: ' + searchHitsTotal);
+
+         if (data.hits.hits) {
+             var hits = data.hits.hits;
+             var ii;
+             var toRet = [];
+
+             var hitsToProcess = hits.length;
+             if(connectionData.limit && (totalCount + hits.length > connectionData.limit)){
+                 hitsToProcess = connectionData.limit - totalCount;
+             }
+
+             // mash the data into an array of objects
+             for (ii = 0; ii < hitsToProcess; ++ii) {
+
+                 var item = hits[ii]._source;
+                 // Copy over any formatted value to the source object
+                 _.each(connectionData.dateFields, function(field){
+
+                     if(!item[field]){
+                         item[field] = null;
+                         return;
+                     }
+
+                     item[field] = moment(item[field].replace(' +', '+')
+                         .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
+                 });
+                 _.each(connectionData.geoPointFields, function(field){
+                     var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
+                     if(latLonParts.length != 2){
+                         console.log('[getTableData] Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
+                         return;
+                     }
+                     item[field.name + '_latitude'] = parseFloat(latLonParts[0]);
+                     item[field.name + '_longitude'] = parseFloat(latLonParts[1]);
+                 });
+                 item._id = hits[ii]._id;
+                 //item._sequence = requestData.from + ii;
+
+                 toRet.push(item);
+             }
+
+             totalCount += hitsToProcess;
+             // If we have a limit, retrieve up to that limit, otherwise
+             // wait until we have no more results returned
+
+             var moreRecords =  connectionData.limit ? totalCount < connectionData.limit : data.hits.hits.length > 0;
+             console.log('[processSearchResults] total processed ' + totalCount + ', limit: ' +
+                         connectionData.limit + ' more records?: ' + moreRecords);
+
+             tableau.dataCallback(toRet, data._scroll_id, moreRecords);
+
+             return {results: toRet, scrollId: data._scroll_id };
+
+         } else {
+             console.log("[getNextScrollResult] No results found for Elasticsearch query: " + JSON.stringify(requestData));
+             tableau.dataCallback([]);
+
+             return([]);
+         }
+     };
   
   var getTableauConnectionData = function(){
     
@@ -539,6 +632,12 @@
         batchSize:  max_iterations,
         limit: limit
       };
+
+      // Update Tableau auth parameters if supplied
+      if(connectionData.elasticsearchAuthenticate){
+          tableau.username = connectionData.elasticsearchUsername;
+          tableau.password = connectionData.elasticsearchPassword;
+      }
       
       return connectionData; 
   };
@@ -553,10 +652,18 @@
           });        
       }
 
+      if(connectionData.elasticsearchAuthenticate){
+          tableau.username = connectionData.elasticsearchUsername;
+          tableau.password = connectionData.elasticsearchPassword;
+      }
+
+      delete connectionData.elasticsearchUsername;
+      delete connectionData.elasticsearchPassword;
+
       tableau.connectionData = JSON.stringify(connectionData);  
       
-      tableau.log('Connection data: ' + tableau.connectionData);    
+      console.log('[updateTableauConnectionData] Connection data: ' + tableau.connectionData);
       return connectionData; 
-  }
+  };
     
 })();

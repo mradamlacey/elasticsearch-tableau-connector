@@ -16,8 +16,6 @@ number of hits.  The user can override the batch size to retrieve more records p
 
 # Known Issues and Limitations
 
-- At this time there appears that the Tableau SDK test framework that executes the connector will only make 6 requests for pages
-of data in Elasticsearch, after this a `Maximum Number of Requests Reached` error will be logged
 - Fields with `array` or`object` they will be ignored
 
 # Configuration
