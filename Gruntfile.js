@@ -62,6 +62,7 @@ require('load-grunt-tasks')(grunt);
       dev: {
         files: [
             { src: 'bower_components/bootstrap/dist/css/bootstrap.css', dest: 'public/bootstrap.css', expand: false },
+            { src: 'bower_components/bootstrap/dist/fonts/*.*', dest: 'public/fonts/', expand: true, flatten: true, filter: 'isFile' },
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'public/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'public/jquery.js', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
@@ -74,6 +75,7 @@ require('load-grunt-tasks')(grunt);
       dist: {
         files: [
             { src: 'bower_components/bootstrap/dist/css/bootstrap.css', dest: 'dist-tmp/bootstrap.css', expand: false },
+            { src: 'bower_components/bootstrap/dist/fonts/*.*', dest: 'dist/fonts/', expand: true, flatten: true, filter: 'isFile' },
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'dist-tmp/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'dist-tmp/jquery.js', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'dist-tmp/lodash.js', expand: false },
