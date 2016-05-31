@@ -492,6 +492,8 @@
              data: JSON.stringify(requestData),
              dataType: 'json',
              beforeSend: function (xhr) {
+                 xhr.setRequestHeader('Accept', null);
+                 xhr.setRequestHeader('Content-Type', 'application/json');
                  if (connectionData.elasticsearchAuthenticate && tableau.username) {
                      xhr.setRequestHeader("Authorization", "Basic " +
                          btoa(tableau.username + ":" + tableau.password));
@@ -524,20 +526,16 @@
              return;
          }
 
-         var connectionUrl = connectionData.elasticsearchUrl + '/_search/scroll';
-
-         var requestData = {
-             scroll: '5m',
-             scroll_id: scrollId
-         };
+         var connectionUrl = connectionData.elasticsearchUrl + '/_search/scroll?scroll=5m&scroll_id='+scrollId;
 
          var xhr = $.ajax({
              url: connectionUrl,
              method: 'POST',
              processData: false,
-             data: JSON.stringify(requestData),
              dataType: 'json',
              beforeSend: function (xhr) {
+                xhr.setRequestHeader('Accept', null);
+                xhr.setRequestHeader('Content-Type', 'application/json')
                  if (connectionData.elasticsearchAuthenticate && tableau.username) {
                      xhr.setRequestHeader("Authorization", "Basic " +
                          btoa(tableau.username + ":" + tableau.password));
