@@ -492,8 +492,8 @@
              data: JSON.stringify(requestData),
              dataType: 'json',
              beforeSend: function (xhr) {
-                xhr.setRequestHeader('Accept', null);
-                xhr.setRequestHeader('Content-Type', 'application/json');
+                 xhr.setRequestHeader('Accept', null);
+                 xhr.setRequestHeader('Content-Type', 'application/json');
                  if (connectionData.elasticsearchAuthenticate && tableau.username) {
                      xhr.setRequestHeader("Authorization", "Basic " +
                          btoa(tableau.username + ":" + tableau.password));
@@ -501,8 +501,11 @@
 
              },
              success: function (data) {
+
                  clearError();
+
                  var result = processSearchResults(data);
+                 
                  cb(null, result.scrollId);
              },
              error: function (xhr, ajaxOptions, err) {
