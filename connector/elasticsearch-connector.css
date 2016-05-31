@@ -37,11 +37,21 @@ div.es-logo {
             animation-duration: .75s;
             animation-iteration-count: infinite;
             animation-timing-function: linear;
+
+            ms-animation-name: rotateThis;
+            ms-animation-duration: .75s;
+            ms-animation-iteration-count: infinite;
+            ms-animation-timing-function: linear;
         }
 
         @keyframes rotateThis {
             from { transform: scale( 1 ) rotate( 0deg );   }
             to   { transform: scale( 1 ) rotate( 360deg ); }
+        }
+
+        @-ms-keyframes rotateThis{
+            from { ms-transform: scale( 1 ) rotate( 0deg );   }
+            to   { ms-transform: scale( 1 ) rotate( 360deg ); }
         }
 
         .hide{

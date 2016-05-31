@@ -108,6 +108,25 @@ and can then start a container, which will map the server to the host's port 300
 ```
 docker run <name of tag> -p 3000:3000
 ```
+## Running as a Windows service
+
+For convenience, the connector comes with [winser](https://github.com/jfromaniello/winser) to install the connector
+web server as a Windows service.
+
+To install as a Windows service:
+
+```
+npm run-script install-service
+```
+
+This will install a service named `elasticsearch-tableau-connector`.  Open the
+Windows service manager (`services.msc`) to start the service.
+
+To uninstall the service:
+
+```
+npm run-script uninstall-service
+```
 
 ## Importing into Tableau Server
 
