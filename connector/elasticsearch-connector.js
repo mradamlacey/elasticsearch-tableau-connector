@@ -505,7 +505,7 @@
                  clearError();
 
                  var result = processSearchResults(data);
-                 
+
                  cb(null, result.scrollId);
              },
              error: function (xhr, ajaxOptions, err) {
