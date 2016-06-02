@@ -5,6 +5,7 @@
     float: 'float',
     long: 'int',
     integer: 'int',
+    double: 'double',
     date: 'datetime',
     boolean: 'bool',
     geo_point: 'string'
