@@ -40,9 +40,9 @@
       }
   }
   
-  var getElasticsearchTypeMapping = function(connectionData){
+  var getElasticsearchTypeMapping = function(connectionData, cb){
 
-      tableau.log('[getElasticsearchTypeMapping] invoking');
+      console.log('[getElasticsearchTypeMapping] invoking');
 
       if(!connectionData.elasticsearchUrl || !connectionData.elasticsearchIndex || !connectionData.elasticsearchType){
           return;
@@ -70,47 +70,27 @@
         
         var indexName = connectionData.elasticsearchIndex;
         
-        // Then we selected an alias... choose the last index with a matching type name
-        // TODO: Let user choose which type from which index
-        if(data[connectionData.elasticsearchIndex] == null){
-            _.forIn(data, function(index, indexKey){
-                if(index.mappings[connectionData.elasticsearchType]){
-                    indexName = indexKey;
-                }
-            });
+        if(cb){
+            cb(null, data);
         }
-        _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function(val, key){
-            // TODO: Need to support nested objects and arrays in some way
-            addElasticsearchField(key, val.type, val.format, val.lat_lon)    
-        });
         
-        tableau.log('Number of header columns: ' + elasticsearchFields.length);
-        
-        var connectionData = getTableauConnectionData();
-      
-        var connectionName = $('#inputConnectionName').val();
-        tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
-        
-        updateTableauConnectionData();        
-      
-        startTime = moment();
-        $('#myPleaseWait').modal('show');
-          if(tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
-              console.log('[getElasticsearchTypeMapping] Submitting tableau interactive phase data');
-              tableau.submit();
-          }
-          else{
-              abortWithError('Invalid phase: ' + tableau.phase + ' aborting', true);
-          }
 
       },
       error: function(xhr, ajaxOptions, err){
+        var err;
         if(xhr.status == 0){
-          abort('Unable to get Elasticsearch types, unable to connect to host or CORS request was denied');
+          err = 'Unable to get Elasticsearch types, unable to connect to host or CORS request was denied';
         }
         else{
-          abort('Unable to get Elasticsearch types, status code: ' + xhr.status + '; ' + xhr.responseText + '\n' + err);
+          err = 'Unable to get Elasticsearch types, status code: ' + xhr.status + '; ' + xhr.responseText + '\n' + err;
         }          
+
+        console.error(err);
+
+        if(cb){
+            cb(err);
+        }
+
       }
     }); 
   }
@@ -156,7 +136,7 @@
       }
 
     
-    tableau.log('getColumnHeaders called, headers: ' + _.pluck(connectionData.fields, 'name').join(', '));
+    console.log('getColumnHeaders called, headers: ' + _.pluck(connectionData.fields, 'name').join(', '));
     tableau.headersCallback(_.pluck(connectionData.fields, 'name'), _.pluck(connectionData.fields, 'dataType'));
   };
    
@@ -312,21 +292,61 @@
 
          handleUseAggregationQueryCheckbox.call($('#cbUseAggregationQuery'));
 
-         $("#submitButton").click(function(e) { // This event fires when a button is clicked
+         $("#submitButton").click(function (e) { // This event fires when a button is clicked
              e.preventDefault();
 
              var connectionData = getTableauConnectionData();
 
-             switch(connectionData.resultMode){
+             switch (connectionData.elasticsearchResultMode) {
                  case "search":
                      // Retrieve the Elasticsearch mapping before we call tableau submit
                      // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
                      // asynchronously
-                     getElasticsearchTypeMapping(getTableauConnectionData());
+                     getElasticsearchTypeMapping(getTableauConnectionData(), function (err, data) {
+                     
+                         if(err){
+                             abort(err);
+                             return;
+                         }
+
+                         // Then we selected an alias... choose the last index with a matching type name
+                         // TODO: Let user choose which type from which index
+                         if (data[connectionData.elasticsearchIndex] == null) {
+                             _.forIn(data, function (index, indexKey) {
+                                 if (index.mappings[connectionData.elasticsearchType]) {
+                                     indexName = indexKey;
+                                 }
+                             });
+                         }
+                         _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
+                             // TODO: Need to support nested objects and arrays in some way
+                             addElasticsearchField(key, val.type, val.format, val.lat_lon)
+                         });
+
+                         console.log('[submit] Number of header columns: ' + elasticsearchFields.length);
+
+                         var connectionData = getTableauConnectionData();
+
+                         var connectionName = $('#inputConnectionName').val();
+                         tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
+
+                         updateTableauConnectionData();
+
+                         startTime = moment();
+                         $('#myPleaseWait').modal('show');
+                         if (tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
+                             console.log('[submit] Submitting tableau interactive phase data');
+                             tableau.submit();
+                         }
+                         else {
+                             abortWithError('Invalid phase: ' + tableau.phase + ' aborting', true);
+                         }
+
+                     });
                      break;
 
                 case "aggregation":
-
+                     abort("Aggregation mode not supported yet");
                      break;
              }
 
