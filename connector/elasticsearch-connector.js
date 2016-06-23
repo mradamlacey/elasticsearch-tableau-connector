@@ -16,7 +16,9 @@
     elasticsearchIndices = [],
     elasticsearchTypes = [],
     startTime,
-    endTime;
+    endTime,
+    queryEditor,
+    aggQueryEditor;
   
   var addElasticsearchField = function(name, esType, format, hasLatLon){
     
@@ -228,10 +230,14 @@
   $(document).ready(function() {
 
       console.log('[$.document.ready] fired...');
-
   });
 
      var initUIControls = function(){
+
+         queryEditor = ace.edit("divElasticsearchQueryEditor");
+         queryEditor.setTheme("ace/theme/github");
+         queryEditor.getSession().setMode("ace/mode/json");
+
          $('#cbUseQuery').change(function() {
              if($(this).is(":checked")) {
                  $('#divQuery').css('display', 'block');
@@ -251,19 +257,79 @@
              }
              else{
                  $('.basic-auth-control').css('display', 'none');
-                 $('#textElasticsearchQuery').val('');
+                 queryEditor.setValue('');
              }
 
              updateTableauConnectionData();
          });
 
+         var handleResultModeCheckbox = function(){
+             var mode = $("input:radio[name='resultmode']:checked").val();
+
+             switch(mode){
+                 case "search":
+                 
+                     console.log("[initUIControls] Showing search result mode controls");
+
+                     $("#divAggregationResultControls").hide();
+                     $("#divSearchResultControls").show();
+                     break;
+
+                 case "aggregation":
+
+                     console.log("[initUIControls] Showing aggregation result mode controls");
+
+                     $("#divSearchResultControls").hide();
+                     $("#divAggregationResultControls").show();
+                     break;
+             }
+         };
+
+         $(document).on("change", "input:radio[name='resultmode']", handleResultModeCheckbox);
+
+         handleResultModeCheckbox.call($("input:radio[name='resultmode']"));
+         
+
+         aggQueryEditor = ace.edit("divElasticsearchAggQueryEditor");
+         aggQueryEditor.setTheme("ace/theme/github");
+         aggQueryEditor.getSession().setMode("ace/mode/json");
+
+         $('#cbUseAggregationQuery').change(handleUseAggregationQueryCheckbox);
+
+         var handleUseAggregationQueryCheckbox = function(){
+             console.log('[initUIControls] handling use aggregation query CB change');
+
+             if($(this).is(":checked")) {
+                 $('#divAggregationQuery').css('display', 'block');
+             }
+             else{
+                 $('#divAggregationQuery').css('display', 'none');
+                 aggQueryEditor.setValue('');
+             }
+
+             updateTableauConnectionData();
+         }
+
+         handleUseAggregationQueryCheckbox.call($('#cbUseAggregationQuery'));
+
          $("#submitButton").click(function(e) { // This event fires when a button is clicked
              e.preventDefault();
 
-             // Retrieve the Elasticsearch mapping before we call tableau submit
-             // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
-             // asynchronously
-             getElasticsearchTypeMapping(getTableauConnectionData());
+             var connectionData = getTableauConnectionData();
+
+             switch(connectionData.resultMode){
+                 case "search":
+                     // Retrieve the Elasticsearch mapping before we call tableau submit
+                     // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
+                     // asynchronously
+                     getElasticsearchTypeMapping(getTableauConnectionData());
+                     break;
+
+                case "aggregation":
+
+                     break;
+             }
+
 
          });
 
@@ -656,7 +722,10 @@
     var esUrl = $('#inputElasticsearchUrl').val();
     var esIndex = $('#inputElasticsearchIndexTypeahead').val();
     var esType = $('#inputElasticsearchTypeTypeahead').val();
-    var esQuery = $('#textElasticsearchQuery').val();
+    var esQuery = queryEditor.getValue();
+
+    var resultMode = $("input:radio[name='resultmode']:checked").val();
+    var esAggQuery = aggQueryEditor.getValue();
     
     var connectionData = {
         elasticsearchUrl: esUrl,
@@ -666,6 +735,8 @@
         elasticsearchIndex: esIndex,
         elasticsearchType: esType,
         elasticsearchQuery: esQuery,
+        elasticsearchResultMode: resultMode,
+        elasticsearchAggQuery: esAggQuery,
         fields: elasticsearchFields,
         fieldsMap: elasticsearchFieldsMap,
         dateFields: elasticsearchDateFields,

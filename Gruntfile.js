@@ -69,7 +69,12 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'public/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false },
-            { src: 'resources/bootstrap3-typeahead.js', dest: 'public/bootstrap3-typeahead.js', expand: false }
+            { src: 'resources/bootstrap3-typeahead.js', dest: 'public/bootstrap3-typeahead.js', expand: false },
+            { src: 'resources/ace.js', dest: 'public/ace.js', expand: false },
+            { src: 'resources/mode-json.js', dest: 'public/mode-json.js', expand: false },
+            { src: 'resources/theme-monokai.js', dest: 'public/theme-monokai.js', expand: false },
+            { src: 'resources/theme-github.js', dest: 'public/theme-github.js', expand: false },
+            { src: 'resources/theme-solarized_light.js', dest: 'public/theme-solarized_light.js', expand: false }
         ]
       },
       dist: {
@@ -82,7 +87,12 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'dist-tmp/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false },
-            { src: 'resources/bootstrap3-typeahead.js', dest: 'dist-tmp/bootstrap3-typeahead.js', expand: false }
+            { src: 'resources/bootstrap3-typeahead.js', dest: 'dist-tmp/bootstrap3-typeahead.js', expand: false },
+            { src: 'resources/ace.js', dest: 'dist-tmp/ace.js', expand: false },
+            { src: 'resources/mode-json.js', dest: 'dist-tmp/mode-json.js', expand: false },
+            { src: 'resources/theme-monokai.js', dest: 'dist-tmp/theme-monokai.js', expand: false },
+            { src: 'resources/theme-github.js', dest: 'dist-tmp/theme-github.js', expand: false },
+            { src: 'resources/theme-solarized_light.js', dest: 'dist-tmp/theme-solarized_light.js', expand: false }
         ]
       }
     },
