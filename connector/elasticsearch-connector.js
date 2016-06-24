@@ -71,7 +71,7 @@
         var indexName = connectionData.elasticsearchIndex;
         
         if(cb){
-            cb(null, data);
+            cb(null, data, connectionData);
         }
         
 
@@ -302,7 +302,7 @@
                      // Retrieve the Elasticsearch mapping before we call tableau submit
                      // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
                      // asynchronously
-                     getElasticsearchTypeMapping(getTableauConnectionData(), function (err, data) {
+                     getElasticsearchTypeMapping(getTableauConnectionData(), function (err, data, connectionData) {
                      
                          if(err){
                              abort(err);
@@ -318,16 +318,14 @@
                                  }
                              });
                          }
-                         _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
+                         _.forIn(data[connectionData.elasticsearchIndex].mappings[connectionData.elasticsearchType].properties, function (val, key) {
                              // TODO: Need to support nested objects and arrays in some way
                              addElasticsearchField(key, val.type, val.format, val.lat_lon)
                          });
 
                          console.log('[submit] Number of header columns: ' + elasticsearchFields.length);
 
-                         var connectionData = getTableauConnectionData();
-
-                         var connectionName = $('#inputConnectionName').val();
+                         var connectionName = connectionData.connectionName;
                          tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
 
                          updateTableauConnectionData();
@@ -551,12 +549,14 @@
          }
 
          var requestData = {};
-         if(connectionData.elasticsearchQuery){
+
+         var strippedQuery = $.trim(connectionData.elasticsearchQuery);
+         if(strippedQuery){
              try{
                  requestData = JSON.parse(connectionData.elasticsearchQuery);
              }
              catch(err){
-                 abort("Error parsing custom query: \n" + err);
+                 abort("Error parsing custom query: " + connectionData.elasticsearchQuery + "\nError:" + err);
                  return;
              }
          }
@@ -748,6 +748,7 @@
     var esAggQuery = aggQueryEditor.getValue();
     
     var connectionData = {
+        connectionName: connectionName,
         elasticsearchUrl: esUrl,
         elasticsearchAuthenticate: auth,
         elasticsearchUsername: username,
