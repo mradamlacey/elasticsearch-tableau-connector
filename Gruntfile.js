@@ -66,9 +66,11 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'public/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'public/jquery.js', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
+            { src: 'bower_components/knockout/dist/knockout.debug.js', dest: 'public/knockout.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'public/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false },
+            { src: 'connector/aggregations.js', dest: 'public/aggregations.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'public/bootstrap3-typeahead.js', expand: false },
             { src: 'resources/ace.js', dest: 'public/ace.js', expand: false },
             { src: 'resources/mode-json.js', dest: 'public/mode-json.js', expand: false },
@@ -84,9 +86,11 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'dist-tmp/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'dist-tmp/jquery.js', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'dist-tmp/lodash.js', expand: false },
+            { src: 'bower_components/knockout/dist/knockout.js', dest: 'dist-tmp/knockout.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'dist-tmp/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false },
+            { src: 'connector/aggregations.js', dest: 'dist-tmp/aggregations.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'dist-tmp/bootstrap3-typeahead.js', expand: false },
             { src: 'resources/ace.js', dest: 'dist-tmp/ace.js', expand: false },
             { src: 'resources/mode-json.js', dest: 'dist-tmp/mode-json.js', expand: false },
@@ -122,9 +126,11 @@ require('load-grunt-tasks')(grunt);
                         'dist-tmp/jquery*.js',
                         'dist-tmp/bootstrap.js',
                         'dist-tmp/bootstrap3-typeahead.js',
+                        'dist-tmp/knockout.js',
                         'dist-tmp/lodash*.js',
                         'dist-tmp/moment*.js',
-                        'dist-tmp/elasticsearch-connector.js'
+                        'dist-tmp/elasticsearch-connector.js',
+                        'dist-tmp/aggregations.js'
                     ]
               }
             }

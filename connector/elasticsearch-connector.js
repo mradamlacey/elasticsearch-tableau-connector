@@ -1,4 +1,4 @@
-(function () {
+var elasticsearchConnector = (function () {
 
     var elasticsearchTableauDataTypeMap = {
         string: 'string',
@@ -1266,5 +1266,9 @@
         console.log('[updateTableauConnectionData] Connection data: ' + tableau.connectionData);
         return connectionData;
     };
+
+    return {
+        getTableauConnectionData: getTableauConnectionData
+    }
 
 })();
