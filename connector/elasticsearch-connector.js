@@ -1268,7 +1268,8 @@ var elasticsearchConnector = (function () {
     };
 
     return {
-        getTableauConnectionData: getTableauConnectionData
+        getTableauConnectionData: getTableauConnectionData,
+        aggregationQueryEditor: aggQueryEditor
     }
 
 })();

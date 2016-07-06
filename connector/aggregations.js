@@ -27,14 +27,25 @@
         self.metrics = ko.observableArray([]);
 
         self.metricTypes = ko.observableArray([ "Count", "Sum", "Average", "Min", "Max", "Stats", "Extended Stats"]);
+        self.selectedMetricType = ko.observable();
+
         self.metricFields = ko.observableArray([]);
+        self.selectedMetricField = ko.observable();
 
         self.buckets = ko.observableArray([]);
 
         self.bucketTypes = ko.observableArray(["Date Range", "Date Histogram", "Range", "Terms"]);
+        self.selectedBucketType = ko.observable();
+
         self.bucketFields = ko.observableArray([]);
+        self.selectedBucketField = ko.observable();
+
+        self.bucketDateRangeRanges = ko.observableArray([]);
+        self.bucketRangeRanges = ko.observableArray([]);
 
         self.dateHistogramIntervals = ["Second", "Minute", "Hour", "Daily", "Weekly", "Monthly", "Yearly", "Custom"];
+
+        self.customDateHistogramInterval = ko.observable();
 
         self.updateTableauConnectionData = function(connectionData){
 
