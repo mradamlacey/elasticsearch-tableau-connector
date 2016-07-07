@@ -56,9 +56,6 @@ var elasticsearchConnector = (function () {
             return abort("Must provide valid Type");
         }
 
-        addElasticsearchField('_id', 'string');
-        addElasticsearchField('_sequence', 'integer');
-
         $.ajax(connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' +
             connectionData.elasticsearchType + '/_mapping', {
                 context: connectionData,
@@ -351,6 +348,9 @@ var elasticsearchConnector = (function () {
                             return abort("No mapping properties found for type: " + connectionData.elasticsearchType + " in index: " + indexName);
                         }
 
+                        addElasticsearchField('_id', 'string');
+                        addElasticsearchField('_sequence', 'integer');
+
                         _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
                             // TODO: Need to support nested objects and arrays in some way
                             addElasticsearchField(key, val.type, val.format, val.lat_lon)
@@ -377,12 +377,22 @@ var elasticsearchConnector = (function () {
                     break;
 
                 case "aggregation":
+
                     var aggsQuery;
-                    try {
-                        aggsQuery = JSON.parse(connectionData.elasticsearchAggQuery);
+
+                    // If not using a custom query - build the request payload based on what
+                    // the user has configured
+                    if(_.isEmpty(connectionData.elasticsearchAggQuery)){
+
+                        aggsQuery = buildAggregationRequest(aggregationData);
                     }
-                    catch (err) {
-                        return abort("Error parsing aggregation query, error: " + err);
+                    else{
+                        try {
+                            aggsQuery = JSON.parse(connectionData.elasticsearchAggQuery);
+                        }
+                        catch (err) {
+                            return abort("Error parsing aggregation query, error: " + err);
+                        }
                     }
 
                     var aggregations = aggsQuery.aggregations ? aggsQuery.aggregations : aggsQuery.aggs;
@@ -479,6 +489,43 @@ var elasticsearchConnector = (function () {
             items: 'all'
         });
 
+    };
+
+    var buildAggregationRequest = function(data){
+
+        var aggsQuery = {
+            query: {
+                filtered : {
+                    filter : {}
+                }
+            }
+        };
+
+        var metricTypeMap = {
+            "Min": "min",
+            "Max": "max",
+            "Average": "avg",
+            "Stats" : "stats",
+            "Extended Stats": "extended_stats"
+        };
+
+        aggsQuery.aggregations = {};
+        var metricNum = 0;
+
+        _.each(data.metrics, function(metric){
+
+            aggsQuery.aggregations = {};
+            var metricName = 'metric_' + metricNum;
+            aggsQuery.aggregations[metricName] = {};
+
+            aggsQuery.aggregations[metricName][metricTypeMap[metric.type]] = {
+                field: metric.field
+            };
+
+            metricNum++;
+        });
+
+        return aggsQuery;
     };
 
     var getElasticsearchTypes = function (indexName, cb) {
@@ -820,7 +867,7 @@ var elasticsearchConnector = (function () {
         var requestData = {};
 
         var strippedQuery = $.trim(connectionData.elasticsearchAggQuery);
-        if (strippedQuery) {
+        if (!_.isEmpty(strippedQuery)){
             try {
                 requestData = JSON.parse(connectionData.elasticsearchAggQuery);
             }
@@ -830,8 +877,7 @@ var elasticsearchConnector = (function () {
             }
         }
         else {
-            abort("No custom aggregation query provided", true);
-            return;
+            requestData = buildAggregationRequest(connectionData.elasticsearchAggregationData);
         }
 
         // Dont return search results
@@ -1224,6 +1270,7 @@ var elasticsearchConnector = (function () {
             elasticsearchType: esType,
             elasticsearchQuery: esQuery,
             elasticsearchResultMode: resultMode,
+            elasticsearchAggregationData: aggregationData,
             elasticsearchAggQuery: esAggQuery,
             fields: elasticsearchFields,
             fieldsMap: elasticsearchFieldsMap,
@@ -1267,9 +1314,19 @@ var elasticsearchConnector = (function () {
         return connectionData;
     };
 
+    var aggregationData;
+    var updateAggregationData = function(data){
+        aggregationData = data;
+    };
+
     return {
         getTableauConnectionData: getTableauConnectionData,
-        aggregationQueryEditor: aggQueryEditor
+        aggregationQueryEditor: aggQueryEditor,
+        abort: abort,
+        getElasticsearchTypeMapping: getElasticsearchTypeMapping,
+        updateAggregationData: updateAggregationData
     }
 
 })();
+
+console.log("[ElasticsearchConnector]", elasticsearchConnector);
