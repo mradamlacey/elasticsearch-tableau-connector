@@ -794,9 +794,17 @@
             // If we have a limit, retrieve up to that limit, otherwise
             // wait until we have no more results returned
 
-            var moreRecords = connectionData.limit ? totalCount < connectionData.limit : data.hits.hits.length > 0;
+            var moreRecords = connectionData.limit ?
+                totalCount < connectionData.limit :
+                data.hits.hits.length > 0;
+
+            if(totalCount >= searchHitsTotal){
+                console.log("[processSearchResults] Total search hits less or equal to the records already retrieved - no more records");
+                moreRecords = false;
+            }
+
             console.log('[processSearchResults] total processed ' + totalCount + ', limit: ' +
-                connectionData.limit + ' more records?: ' + moreRecords);
+                connectionData.limit + ' more records?: ' + moreRecords + ', total search hits: ' + searchHitsTotal);
 
             tableau.dataCallback(toRet, data._scroll_id, moreRecords);
 
