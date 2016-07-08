@@ -5,6 +5,9 @@ var aggregations = (function () {
         var self = this;
 
         self.useCustomQuery = ko.observable(false);
+        self.useAggFilter = ko.observable(false);
+
+        self.aggregationFilter = ko.observable();
 
         self.addMetric = function(){
 
@@ -19,11 +22,13 @@ var aggregations = (function () {
                 return elasticsearchConnector.abort("Must provide Elasticsearch Type to add metrics");
             }
 
-            self.getUpdatedTypeFields();
+            self.getUpdatedTypeFields(function(err, data){
+                if(err) return;
 
-            var metric = new Metric();
-
-            self.metrics.push(metric);
+                var metric = new Metric();
+                self.metrics.push(metric);
+            });
+            
         };
 
         self.removeMetric = function(){
@@ -68,7 +73,7 @@ var aggregations = (function () {
         self.bucketDateRangeRanges = ko.observableArray([]);
         self.bucketRangeRanges = ko.observableArray([]);
 
-        self.dateHistogramIntervals = ["Second", "Minute", "Hour", "Daily", "Weekly", "Monthly", "Yearly", "Custom"];
+        self.dateHistogramIntervalOptions = ["Every Second", "Every Minute", "Hourly", "Daily", "Weekly", "Monthly", "Yearly", "Custom"];
 
         self.customDateHistogramInterval = ko.observable();
 
@@ -99,17 +104,33 @@ var aggregations = (function () {
                         });
                     }
 
+                    var err;
                     if (data[indexName] == null) {
-                        return elasticsearchConnector.abort("No mapping found for type: " + connectionData.elasticsearchType + " in index: " + indexName);
+                        err = "No mapping found for type: " + connectionData.elasticsearchType + " in index: " + indexName;
+                        if(cb){
+                            cb(err);
+                        }
+                        return elasticsearchConnector.abort(err);
                     }
 
                     if (data[indexName].mappings == null) {
-                        return elasticsearchConnector.abort("No mapping found for index: " + indexName);
+                        err = "No mapping found for index: " + indexName;
+                        if(cb){
+                            cb(err);
+                        }
+                        return elasticsearchConnector.abort(err);
                     }
 
                     if (data[indexName].mappings[connectionData.elasticsearchType] == null) {
-                        return elasticsearchConnector.abort("No mapping properties found for type: " + connectionData.elasticsearchType + " in index: " + indexName);
+                        err = "No mapping properties found for type: " + connectionData.elasticsearchType + " in index: " + indexName;
+                        if(cb){
+                            cb(err);
+                        }
+                        return elasticsearchConnector.abort(err);
                     }
+
+                    self.fields.removeAll();
+                    self.metricFields.removeAll();
 
                     _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
                         // TODO: Need to support nested objects and arrays in some way
@@ -124,6 +145,10 @@ var aggregations = (function () {
                         self.metricFields.push({name: key, type: val.type});
                     });
 
+                    if(!cb){
+                        return;
+                    }
+
                     cb(null, data);
                 });
         };
@@ -132,6 +157,8 @@ var aggregations = (function () {
 
         };
 
+        // Add default count metric
+        // self.addBucket("Count", null);
     };
 
     var Metric = function(type, field){
@@ -152,25 +179,73 @@ var aggregations = (function () {
 
         var self = this;
 
-        self.type = ko.observable(type ? type : "Terms");
+        self.type = ko.observable(type ? type : ["Terms"]);
         self.field = ko.observable(field);
-        self.fields = ko.observableArray(["Test"]);
+        self.fields = ko.observableArray([]);
+        self.termSize = ko.observable(0);
+        self.dateHistogramType = ko.observable();
+        self.dateHistogramCustomInterval = ko.observable();
+        self.ranges = ko.observableArray([]);
+        self.dateRanges = ko.observableArray([]);
+        self.dateRangeTypes = ko.observableArray(["Relative", "Absolute", "Custom"]);
+        self.relativeOptions = ko.observableArray([ "Minute(s) ago", "Hour(s) ago", "Day(s) ago", "Week(s) ago", "Month(s) ago", "Quarter(s) ago", "Year(s) ago"]);
+
+        self.addRange = function(){
+            var range;
+
+            // If we have a previous range - prefill the from portion of the new range
+            // with the 'to' portion of the last range
+            if(self.ranges().length > 0){
+                var lastRange = self.ranges()[self.ranges().length - 1];
+                range = new Range(lastRange.to(), null, 
+                                  lastRange.relativeNumTo(), null,
+                                  lastRange.toType(), null);
+            }
+            else{
+               range = new Range(); 
+            }
+            self.ranges.push(range);
+        };
+
+        self.removeRange = function(){
+            self.ranges.remove(this);
+        };
+
+        self.addDateRange = function(){
+            var range;
+
+            // If we have a previous range - prefill the from portion of the new range
+            // with the 'to' portion of the last range
+            if(self.dateRanges().length > 0){
+                var lastRange = self.dateRanges()[self.dateRanges().length - 1];
+                range = new Range(lastRange.to(), null, 
+                                  lastRange.relativeNumTo(), null,
+                                  lastRange.toType(), null);
+            }
+            else{
+               range = new Range(); 
+            }
+
+            self.dateRanges.push(range);
+        };
+
+        self.removeDateRange = function(){
+            self.dateRanges.remove(this);
+        };
 
         self.updateFields = function(){
-
-            self.fields.removeAll();
 
             vm.getUpdatedTypeFields(function(data){
 
                 var newFields = [];
 
-                switch(self.type() ? self.type()[0] : ""){
+                switch(self.type() ? self.type() : ""){
                     case "Terms":
 
                         newFields = _.map(vm.fields(), function(field){
 
                             if(field.type == "string" || field.type == "double" ||
-                                field.type == "int" || field.type == "long" || field.type == "date"){
+                               field.type == "int" || field.type == "long" || field.type == "date"){
                                 return field.name;
                             }
                             else{
@@ -227,6 +302,8 @@ var aggregations = (function () {
 
                 newFields = _.filter(newFields, function(field){return field != null});
 
+                self.fields.removeAll();
+
                 _.each(newFields, function(newField){
                     self.fields.push(newField);
                 });
@@ -241,9 +318,67 @@ var aggregations = (function () {
         self.field.subscribe(function(newValue){
             updateAggregationData();
         });
+        self.termSize.subscribe(function(newValue){
+            updateAggregationData();
+        });
+        self.dateHistogramType.subscribe(function(newValue){
+            if(newValue != "Custom"){
+                self.dateHistogramCustomInterval("");
+            }
 
-        // Set list of fields based on the initial value for 'type'
-        self.updateFields();
+            updateAggregationData();
+        });
+        self.dateHistogramCustomInterval.subscribe(function(newValue){
+            updateAggregationData();
+        });
+        self.ranges.subscribe(function(newValue){
+            updateAggregationData();
+        });
+        self.dateRanges.subscribe(function(newValue){
+            updateAggregationData();
+        });
+
+    };
+
+    var Range = function(from, to, relativeNumFrom, relativeNumTo, fromType, toType){
+        var self = this;
+
+        self.from = ko.observable(from);
+        self.relativeNumFrom = ko.observable(relativeNumFrom ? relativeNumFrom : 1);
+        self.fromRelative = ko.observable();
+        self.to = ko.observable(to);
+        self.relativeNumTo = ko.observable(relativeNumTo ? relativeNumTo : 1);
+        self.toRelative = ko.observable();
+
+        self.fromType = ko.observable(fromType ? fromType : 'Relative');
+        self.toType = ko.observable(toType ? toType : 'Relative');
+
+        self.from.subscribe(function(newValue){
+            updateAggregationData();
+        });
+        self.to.subscribe(function(newValue){
+            updateAggregationData();
+        });
+        self.relativeNumFrom.subscribe(function(newValue){            
+            updateAggregationData();
+        });
+        self.relativeNumTo.subscribe(function(newValue){            
+            updateAggregationData();
+        });
+        self.fromRelative.subscribe(function(newValue){            
+            updateAggregationData();
+        });
+        self.toRelative.subscribe(function(newValue){            
+            updateAggregationData();
+        });
+        self.fromType.subscribe(function(newValue){
+            self.from("");
+            updateAggregationData();
+        });
+        self.toType.subscribe(function(newValue){
+            self.to("");
+            updateAggregationData();
+        });
     };
 
     var vm = new AggregationsViewModel();
@@ -264,24 +399,92 @@ var aggregations = (function () {
         updateAggregationData();
     });
 
+    vm.useAggFilter.subscribe(function(newValue){
+
+        if(!newValue){
+            vm.aggregationFilter("");
+        }
+        updateAggregationData();
+    });
+
+    vm.aggregationFilter.subscribe(function(){
+        updateAggregationData();
+    });
+
     var updateAggregationData = function(){
 
         var metrics = _.map(vm.getMetrics(), function(metric){
             return {
-                type: metric.type() ? metric.type()[0] : null,
-                field: metric.field() ? metric.field()[0].name : null
+                type: metric.type() ? metric.type() : null,
+                field: metric.field() && metric.field() ? metric.field().name : null
             };
         });
+
+        var relativeOptionsMap = {
+            "Minute(s) ago" : "m/m", 
+            "Hour(s) ago": "h/h", 
+            "Day(s) ago": "d/d", 
+            "Week(s) ago": "w/w", 
+            "Month(s) ago": "M/M", 
+            "Quarter(s) ago": "q/q", 
+            "Year(s) ago": "y/y"
+        };
+
         var buckets = _.map(vm.getBuckets(), function(bucket){
             return {
-                type: bucket.type() ? bucket.type()[0] : null,
-                field: bucket.field() ? bucket.field()[0] : null
+                type: bucket.type() ? bucket.type() : null,
+                field: bucket.field() ? bucket.field() : null,
+                termSize: bucket.termSize(),
+                dateHistogramType: bucket.dateHistogramType() && bucket.dateHistogramType() ? bucket.dateHistogramType() : bucket.dateHistogramType(),
+                dateHistogramCustomInterval: bucket.dateHistogramCustomInterval(),
+                ranges: _.map(bucket.ranges(), function(range){
+                    return {
+                        from: range.from(),
+                        to: range.to()
+                    };
+                }),
+                dateRanges: _.map(bucket.dateRanges(), function(range){
+                    var from, to;
+                    if(range.fromType() == "Absolute"){
+                        from = moment.utc(range.from()).format('YYYY-MM-DD[T]HH:mm:ss');
+                    }
+                    if(range.fromType() == "Custom"){
+                        from = range.from();
+                    }
+                    if(range.fromType() == "Relative"){
+                        if(isNaN(parseInt(range.relativeNumFrom())) || range.relativeNumFrom() == 0){
+                            from = "now";
+                        }
+                        else{
+                            from = "now-" + range.relativeNumFrom() + relativeOptionsMap[range.fromRelative()];
+                        }
+                    }
+
+                    if(range.toType() == "Absolute"){
+                        to = moment.utc(range.to()).format('YYYY-MM-DD[T]HH:mm:ss');
+                    }
+                    if(range.toType() == "Custom"){
+                        to = range.to();
+                    }
+                    if(range.toType() == "Relative"){
+                        if(isNaN(parseInt(range.relativeNumTo())) || range.relativeNumTo() == 0){
+                            to = "now";
+                        }
+                        else{
+                            to = "now-" + range.relativeNumTo() + relativeOptionsMap[range.toRelative()];
+                        }
+                        
+                    }
+                    return {
+                        from: from,
+                        to: to
+                    };
+                })
             };
         });
 
-
         var data = {
-            filter: null,
+            filter: vm.useAggFilter() ? vm.aggregationFilter() : null,
             metrics: metrics,
             buckets: buckets
         };

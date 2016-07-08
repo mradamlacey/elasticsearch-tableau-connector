@@ -5,6 +5,7 @@
 
 <!--(if target dev)><!--> 
   <link rel="stylesheet" href="bootstrap.css">
+  <link rel="stylesheet" href="bootstrap-datepicker.css">
   <link rel="stylesheet" href="elasticsearch-connector.css">
 <!--<!(endif)-->
 <!--(if target dist)><!-->   
@@ -18,11 +19,12 @@
 
   <div class="container-fluid">
     
-    <div class="row">
+    <div class="row title-row">
       <div class="col-md-10 col-md-offset-1">
 
-        <h2>Elasticsearch Tableau Web Data Connector</h2>
-        <div class="es-logo"></div>
+        
+        <div class="es-logo pull-left"></div>
+        <div class="title pull-left"><h2>Tableau Web Data Connector</h2></div>
         
       </div>
     </div>
@@ -53,7 +55,7 @@
     <div class="row tableau">
       <div class="col-md-10 col-md-offset-1">
    
-        <form id="inputForm">
+
           <div class="form-group">
             <label for="inputConnectionName">Connection Name</label>
             <input class="form-control" id="inputConnectionName" placeholder="Enter unique name of Tableau Data Connection">
@@ -150,52 +152,224 @@
             </div>
 
               <div id="divAggregationBuilder" class="form-group" data-bind="visible: !useCustomQuery()">
-                  <div class="aggregation-builder-container">
-                      <h3>Metrics</h3>
+
+                  <div class="checkbox">
+                      <label>
+                          <input id="cbUseAggregationFilter" type="checkbox"
+                                 data-bind="checked: useAggFilter" checked>Filter data included in aggregations?
+                      </label>
+                  </div>
+
+                <div class="form-group" data-bind="visible: useAggFilter">
+
+                    <div class="input-group input-group-unstyled">
+                        <label>Filter</label>
+                        <input type="text" class="form-control" placeholder="Enter filter using Query String syntax, e.g. 'field_name:match AND date:[2015-01-01 TO 2016-01-01] or _exists_:field_name'" data-bind="value: aggregationFilter">
+
+                        <span class="input-group-addon">
+                        <i id="iconInfoAggregationFilter" class="glyphicon glyphicon-info-sign input-group-inline-icon"
+                                            title="Aggregation Filter"></i>
+                    </span>
+                    </div>
+
+                </div>
+
+                  <div class="aggregation-builder-container metrics-builder">
+                      <h4 class="agg-section">Metrics per Aggregation Bucket</h4>
 
                       <div data-bind="foreach: { data: metrics }">
 
-                          <div class="form-group">
+                          <form class="form-inline card">
+
                               <div class="form-group">
                                   <label>Metric</label>
-                                  <select data-bind="options: $parent.metricTypes, selectedOptions: type"></select>
+                                  <select class="form-control" data-bind="options: $parent.metricTypes, value: type"></select>
                               </div>
 
                               <div class="form-group" data-bind="visible: type() != 'Count'">
                                   <label>Field</label>
-                                  <select data-bind="options: $parent.metricFields, selectedOptions: field, optionsText: 'name',"></select>
+                                  <select class="form-control" data-bind="options: $parent.metricFields, value: field, optionsText: 'name',"></select>
                               </div>
-                          </div>
 
-                          <button class="btn btn-default" data-bind="click: $parent.removeMetric">Remove</button>
+                              <div class="clearfix">
+                              </div>
+
+                              <div class="form-group pull-right">
+                                  <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeMetric">
+                                      Remove
+                                  </button>
+                              </div>
+
+                              <div class="clearfix">
+                              </div>                              
+
+                          </form>
+                       
 
                       </div>
 
-                      <button class="btn btn-default" data-bind="click: addMetric">Add Metric</button>
+                      <button class="btn btn-default" data-bind="click: addMetric">Add Metric
+                        <span class="glyphicon glyphicon-stats" aria-hidden="true"></span>
+                      </button>
                   </div>
 
-                  <div class="aggregation-builder-container">
-                      <h3>Buckets</h3>
+                  <div class="aggregation-builder-container buckets-builder">
+                      <h4 class="agg-section">Aggregation Buckets</h4>
 
                       <div data-bind="foreach: { data: buckets }">
+
+                          <div class="card" data-bind="css: 'bucket_level_' + $index()">
 
                           <div class="form-group">
                               <div class="form-group">
                                   <label>Bucket</label>
-                                  <select data-bind="options: $parent.bucketTypes, selectedOptions: type"></select>
+                                  <select class="form-control" data-bind="options: $parent.bucketTypes, value: type"></select>
                               </div>
 
                               <div class="form-group">
                                   <label>Field</label>
-                                  <select data-bind="options: fields, selectedOptions: field"></select>
+                                  <select class="form-control" data-bind="options: fields, value: field"></select>
                               </div>
                           </div>
 
-                          <button class="btn btn-default" data-bind="click: $parent.removeBucket">Remove</button>
+                          <div class="form-inline" data-bind="visible: type() == 'Terms'">
+
+                              <div class="form-group">
+                                  <label>Number of Terms</label>                                           
+                                  <input type="number" class="form-control bucket-number-input" data-bind="value: termSize">
+                                  <i data-bind="bootstrapPopover" class="glyphicon glyphicon-info-sign"
+                                     data-toggle="popover"
+                                     data-trigger="hover"
+                                     title="Number of Terms" 
+                                     data-content="Defines the maximum number of unique terms to aggregate metrics to for the selected field.  Default of '0' will retrieve all"></i>
+                              </div>
+
+                          </div>
+
+                          <div class="form-inline" data-bind="visible: type() == 'Date Histogram'">
+
+                              <div class="form-group">
+                                  <label>Interval</label>
+                                  <select class="form-control" data-bind="options: $parent.dateHistogramIntervalOptions, value: dateHistogramType"></select>
+                              </div>
+
+                              <div class="form-group" data-bind="visible: dateHistogramType() == 'Custom'">
+                                  <label for="inputDateHistogramIntervalCustom">Custom Interval Value</label>
+                                  <input type="text" class="form-control" id="inputDateHistogramIntervalCustom" 
+                                         placeholder="Enter interval value e.g. 3M, 2y, 5m"
+                                         data-bind="value: dateHistogramCustomInterval">
+                                  <i data-bind="bootstrapPopover" class="glyphicon glyphicon-info-sign"
+                                     data-toggle="popover"
+                                     data-trigger="hover"
+                                     title="Custom Interval Value" 
+                                     data-content="Value that defines a custom interval.  Examples: 1w - every 1 week, 4M - every 4 months, 22y - every 22 years, 30m - every 30 minutes"></i>
+                              
+                              </div>
+
+                          </div>
+
+                          <div class="form-group" data-bind="visible: type() == 'Range'">
+                              <label>Ranges</label> 
+
+                              <div data-bind="foreach: { data: ranges }">
+
+                                  <form class="form-inline">
+
+                                      <div class="form-group">
+                                          <label>From</label>
+                                          <input type="text" class="form-control" data-bind="value: from">
+                                      </div>
+                                      <div class="form-group">
+                                          <label>To</label>
+                                          <input type="text" class="form-control" data-bind="value: to">
+                                      </div>
+                                      <div class="form-group">
+                                          <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeRange">
+                                              <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                          </button>
+                                      </div>
+
+                                   </form>
+
+                              </div>
+
+                              <button class="btn btn-default" data-bind="click: addRange">Add Range</button>
+                          </div>
+
+                          <div class="form-group" data-bind="visible: type() == 'Date Range'">
+                              <label>Date Ranges</label>
+
+                              <div data-bind="foreach: { data: dateRanges }">
+
+                                  <form class="form-inline range-row" data-bind="css: { alternaterow: $index() % 2 }">
+                                      <div class="form-group">
+                                          
+                                          <label>From</label>
+                                          <div class="form-group">
+                                              <select class="form-control" data-bind="options: $parent.dateRangeTypes, value: fromType"></select>
+                                          </div>
+
+                                          <div class="input-group date" data-bind="bootstrapDatePicker, visible: fromType() == 'Absolute'">
+                                              <input type="text" class="form-control" data-bind="value: from">
+                                              <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span>
+                                          </div>
+
+                                          <input type="number" class="form-control date-range-number" data-bind="value: relativeNumFrom, visible: fromType() == 'Relative'">
+                                          <select class="form-control" data-bind="options: $parent.relativeOptions, value: fromRelative, visible: fromType() == 'Relative'"></select>
+
+                                          <input type="text" class="form-control" data-bind="value: from, visible: fromType() == 'Custom'"
+                                                 placeholder="Enter custom date e.g. 'now-3M/M'">
+                                          
+                                      </div>
+                                      <div class="form-group">
+                                          
+                                          <label>To</label>      
+                                          <div class="form-group">
+                                              <select class="form-control" data-bind="options: $parent.dateRangeTypes, value: toType"></select>
+                                          </div>
+
+                                          <div class="input-group date" data-bind="bootstrapDatePicker, visible: toType() == 'Absolute'">
+                                              <input type="text" class="form-control" data-bind="value: to">
+                                              <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span>
+                                          </div>
+
+                                          <input type="number" class="form-control date-range-number" data-bind="value: relativeNumTo, visible: toType() == 'Relative'">
+                                          <select class="form-control" data-bind="options: $parent.relativeOptions, value: toRelative, visible: toType() == 'Relative'"></select>
+
+                                          <input type="text" class="form-control" data-bind="value: to, visible: toType() == 'Custom'">
+
+                                      </div>
+                                      <div class="form-group">
+                                          <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeDateRange">
+                                              <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                          </button>
+                                      </div>
+                                   </form>
+
+                              </div>
+
+                              <button class="btn btn-default" data-bind="click: addDateRange">Add Range</button>
+                          </div>
+
+                              <div class="clearfix">
+                              </div>
+
+                              <div class="form-group pull-right" style="margin-bottom: 0px">
+                                  <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeBucket">
+                                      Remove
+                                  </button>
+                              </div>
+                          
+                              <div class="clearfix">
+                              </div>
+
+                          </div>
 
                       </div>
 
-                      <button class="btn btn-default" data-bind="click: addBucket">Add Bucket</button>
+                      <button class="btn btn-default" data-bind="click: addBucket">Add Bucket
+                        <span class="glyphicon glyphicon-th-large" aria-hidden="true"></span>
+                      </button>
                   </div>
               </div>
 
@@ -212,9 +386,8 @@
 
           </div>
 
-          <button id="submitButton" type="submit" class="btn btn-default">Submit</button>
+          <button id="submitButton" type="submit" class="btn btn-primary">Submit</button>
 
-        </form>
       </div>
 
     </div>
@@ -261,6 +434,7 @@
   <script src="jquery.js" type="text/javascript"></script>
   <script src="bootstrap.js" type="text/javascript"></script>
   <script src="bootstrap3-typeahead.js" type="text/javascript"></script>
+  <script src="bootstrap-datepicker.js" type="text/javascript"></script>
   <script src="knockout.js" type="text/javascript"></script>
   <script src="lodash.js" type="text/javascript"></script>
   <script src="moment.js" type="text/javascript"></script>

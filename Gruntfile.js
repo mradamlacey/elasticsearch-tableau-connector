@@ -72,11 +72,14 @@ require('load-grunt-tasks')(grunt);
             { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false },
             { src: 'connector/aggregations.js', dest: 'public/aggregations.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'public/bootstrap3-typeahead.js', expand: false },
+            { src: 'resources/bootstrap-datepicker/js/bootstrap-datepicker.js', dest: 'public/bootstrap-datepicker.js', expand: false },
+            { src: 'resources/bootstrap-datepicker/css/bootstrap-datepicker3.css', dest: 'public/bootstrap-datepicker.css', expand: false },
             { src: 'resources/ace.js', dest: 'public/ace.js', expand: false },
             { src: 'resources/mode-json.js', dest: 'public/mode-json.js', expand: false },
             { src: 'resources/theme-monokai.js', dest: 'public/theme-monokai.js', expand: false },
             { src: 'resources/theme-github.js', dest: 'public/theme-github.js', expand: false },
-            { src: 'resources/theme-solarized_light.js', dest: 'public/theme-solarized_light.js', expand: false }
+            { src: 'resources/theme-solarized_light.js', dest: 'public/theme-solarized_light.js', expand: false },
+            { src: 'resources/elasticsearch-logo.png', dest: 'public/elasticsearch-logo.png', expand: false }
         ]
       },
       dist: {
@@ -92,11 +95,14 @@ require('load-grunt-tasks')(grunt);
             { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false },
             { src: 'connector/aggregations.js', dest: 'dist-tmp/aggregations.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'dist-tmp/bootstrap3-typeahead.js', expand: false },
+            { src: 'resources/bootstrap-datepicker/js/bootstrap-datepicker.js', dest: 'dist-tmp/bootstrap-datepicker.js', expand: false },
+            { src: 'resources/bootstrap-datepicker/css/bootstrap-datepicker3.css', dest: 'dist-tmp/bootstrap-datepicker.css', expand: false },
             { src: 'resources/ace.js', dest: 'dist-tmp/ace.js', expand: false },
             { src: 'resources/mode-json.js', dest: 'dist-tmp/mode-json.js', expand: false },
             { src: 'resources/theme-monokai.js', dest: 'dist-tmp/theme-monokai.js', expand: false },
             { src: 'resources/theme-github.js', dest: 'dist-tmp/theme-github.js', expand: false },
-            { src: 'resources/theme-solarized_light.js', dest: 'dist-tmp/theme-solarized_light.js', expand: false }
+            { src: 'resources/theme-solarized_light.js', dest: 'dist-tmp/theme-solarized_light.js', expand: false },
+            { src: 'resources/elasticsearch-logo.png', dest: 'dist-tmp/elasticsearch-logo.png', expand: false }
         ]
       }
     },
@@ -126,6 +132,7 @@ require('load-grunt-tasks')(grunt);
                         'dist-tmp/jquery*.js',
                         'dist-tmp/bootstrap.js',
                         'dist-tmp/bootstrap3-typeahead.js',
+                        'dist-tmp/bootstrap-datepicker.js',
                         'dist-tmp/knockout.js',
                         'dist-tmp/lodash*.js',
                         'dist-tmp/moment*.js',
@@ -142,7 +149,9 @@ require('load-grunt-tasks')(grunt);
          },
          dist: {
             files: {
-                'dist/elasticsearch-connector.min.css': ['dist-tmp/bootstrap.css', 'dist-tmp/elasticsearch-connector.css']
+                'dist/elasticsearch-connector.min.css': ['dist-tmp/bootstrap.css', 
+                                                         'dist-tmp/bootstrap-datepicker.css', 
+                                                         'dist-tmp/elasticsearch-connector.css']
             }
          }
       },

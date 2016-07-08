@@ -177,7 +177,9 @@ var elasticsearchConnector = (function () {
 
             console.log('[getTableData] getting aggregation response');
 
-            getAggregationResponse();
+            getAggregationResponse(function(data){
+                console.log("[getTableData] Finished retrieving aggregation response");
+            });
         }
 
 
@@ -233,11 +235,20 @@ var elasticsearchConnector = (function () {
         queryEditor.getSession().setMode("ace/mode/json");
 
         // Initialize Bootstrap popovers
+
         $('#iconUseSyncClientWorkaround').popover({
             container: "body",
             trigger: "hover"
         });
 
+        $('#iconInfoAggregationFilter').popover({
+            container: "body",
+            trigger: "hover" ,
+            html: true,
+            delay: { hide: 2500 },
+            placement: "left",
+            content: "Use Query String syntax to define a filter to apply to the data that is aggregated.  Refer to: <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax'>Query String Syntax</a>"           
+        });
 
         $('#cbUseQuery').change(function () {
             if ($(this).is(":checked")) {
@@ -470,7 +481,10 @@ var elasticsearchConnector = (function () {
             },
             autoSelect: true,
             showHintOnFocus: true,
-            items: 'all'
+            items: 'all',
+            afterSelect: function(){
+
+            }
         });
 
         $("#inputElasticsearchTypeTypeahead").typeahead({
@@ -500,36 +514,139 @@ var elasticsearchConnector = (function () {
     var buildAggregationRequest = function(data){
 
         var aggsQuery = {
-            query: {
-                filtered : {
-                    filter : {}
-                }
-            }
+            query: {}
         };
+
+        // Apply global filter using query_string (uses Lucene syntax)
+        if(data.filter){
+            aggsQuery.query.query_string = { query: data.filter };
+        }
+        else{
+            aggsQuery.query.match_all = {};
+        }
 
         var metricTypeMap = {
             "Min": "min",
             "Max": "max",
             "Average": "avg",
+            "Sum": "sum",
             "Stats" : "stats",
             "Extended Stats": "extended_stats"
         };
 
         aggsQuery.aggregations = {};
+
+        var bucketTypeMap = {
+            "Date Range": "date_range",
+            "Date Histogram": "date_histogram",
+            "Range": "range",
+            "Terms": "terms"
+        };
+
+        var dateIntervalMap = {
+            "Every Second": "1s",
+            "Every Minute": "1m",
+            "Hourly": "1h", 
+            "Daily": "1d", 
+            "Weekly": "1w", 
+            "Monthly": "1M", 
+            "Yearly": "1y"
+        };
+
+        var relativeRangeMap = {};
+
+        var currentAg = aggsQuery.aggregations,
+            lastAg = null,
+            bucketName = null;
+        var bucketNum = 0;
+        _.each(data.buckets, function(bucket){
+
+            bucketName = 'bucket_' + bucketNum;
+            currentAg[bucketName] = {};
+
+            if(bucket.type == "Terms"){
+                currentAg[bucketName][bucketTypeMap[bucket.type]] = {
+                    field: bucket.field,
+                    size: bucket.termSize
+                };
+            }
+            if(bucket.type == "Date Range"){
+
+                currentAg[bucketName][bucketTypeMap[bucket.type]] = {
+                    field: bucket.field,
+                    ranges: _.map(bucket.dateRanges, function(range){
+                        var rangeObj = {},
+                            from = range.from,
+                            to = range.to;
+
+                        if(!_.isEmpty(from)) rangeObj.from = from;
+                        if(!_.isEmpty(to)) rangeObj.to = to;
+
+                        return rangeObj;
+                    })
+                };
+            }
+            if(bucket.type == "Date Histogram"){
+
+                var interval = bucket.dateHistogramType == "Custom" ? bucket.dateHistogramCustomInterval : dateIntervalMap[bucket.dateHistogramType];
+
+                currentAg[bucketName][bucketTypeMap[bucket.type]] = {
+                    field: bucket.field,
+                    interval: interval
+                };
+
+            }
+            if(bucket.type == "Range"){
+                currentAg[bucketName][bucketTypeMap[bucket.type]] = {
+                    field: bucket.field,
+                    ranges: _.map(bucket.ranges, function(range){
+                        var rangeObj = {},
+                            from = parseInt(range.from),
+                            to = parseInt(range.to);
+
+                        if(!isNaN(from)) rangeObj.from = from;
+                        if(!isNaN(to)) rangeObj.to = to;
+
+                        return rangeObj;
+                    })
+                };
+            }
+ 
+            bucketNum++;
+            currentAg[bucketName].aggregations = {};
+            lastAg = currentAg;
+            currentAg = currentAg[bucketName].aggregations;
+
+        });
+
         var metricNum = 0;
 
-        _.each(data.metrics, function(metric){
+        if(data.metrics.length == 0){
+            // If no metrics - then delete the child aggregations element - not used
+            delete lastAg[bucketName].aggregations;
+        }
+        else if(data.metrics.length == 1 && data.metrics[0].type == "Count"){
+            // Don't need to add any aggregation for a count of the leaf buckets - we get this for free
+            delete lastAg[bucketName].aggregations;
+        }
+        else{
+            _.each(data.metrics, function(metric){
 
-            aggsQuery.aggregations = {};
-            var metricName = 'metric_' + metricNum;
-            aggsQuery.aggregations[metricName] = {};
+                // Skip Count metrics - we get these for free
+                if(metric.type == "Count"){
+                    return;
+                }
 
-            aggsQuery.aggregations[metricName][metricTypeMap[metric.type]] = {
-                field: metric.field
-            };
+                var metricName = 'metric_' + metricNum;
+                currentAg[metricName] = {};
 
-            metricNum++;
-        });
+                currentAg[metricName][metricTypeMap[metric.type]] = {
+                    field: metric.field
+                };
+
+                metricNum++;
+            });
+        }
 
         return aggsQuery;
     };
@@ -866,8 +983,10 @@ var elasticsearchConnector = (function () {
                 requestData = JSON.parse(connectionData.elasticsearchAggQuery);
             }
             catch (err) {
-                abort("Error parsing custom aggregation query: " + connectionData.elasticsearchAggQuery + "\nError:" + err);
-                return;
+                var errMsg = "Error parsing custom aggregation query: " + connectionData.elasticsearchAggQuery + "\nError:" + err;
+                if(cb) cb(errMsg);
+
+                return abort(errMsg);
             }
         }
         else {
@@ -903,11 +1022,16 @@ var elasticsearchConnector = (function () {
                 
             },
             error: function (xhr, ajaxOptions, err) {
+                var error;
                 if (xhr.status == 0) {
-                    cb('Error creating Elasticsearch scroll window, unable to connect to host or CORS request was denied');
+                    error = 'Error creating Elasticsearch scroll window, unable to connect to host or CORS request was denied';
+                    if(cb) cb(error);
+                    abort(error);
                 }
                 else {
-                    cb("Error creating Elasticsearch scroll window, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+                    error = "Error creating Elasticsearch scroll window, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err
+                    if(cb) cb(error);
+                    abort(error);
                 }
             }
         });
@@ -1246,10 +1370,10 @@ var elasticsearchConnector = (function () {
         var esUrl = $('#inputElasticsearchUrl').val();
         var esIndex = $('#inputElasticsearchIndexTypeahead').val();
         var esType = $('#inputElasticsearchTypeTypeahead').val();
-        var esQuery = queryEditor.getValue();
+        var esQuery = queryEditor ? queryEditor.getValue() : null;
 
         var resultMode = $("input:radio[name='resultmode']:checked").val();
-        var esAggQuery = aggQueryEditor.getValue();
+        var esAggQuery = aggQueryEditor ? aggQueryEditor.getValue() : null;
 
         var connectionData = {
             connectionName: connectionName,
@@ -1331,6 +1455,26 @@ var elasticsearchConnector = (function () {
     var updateAggregationData = function(data){
         aggregationData = data;
     };
+
+    // Custom knockout bindings
+
+    // Bootstrap DatePicker
+    ko.bindingHandlers.bootstrapDatePicker = {
+        init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
+            $(element).datepicker({
+               todayBtn: "linked"
+            });
+        }
+    };
+
+    ko.bindingHandlers.bootstrapPopover = {
+     init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
+            $(element).popover({            
+                container: "body",
+                trigger: "hover"
+            });
+        }   
+    }
 
     return {
         getTableauConnectionData: getTableauConnectionData,
