@@ -5,6 +5,7 @@ var elasticsearchConnector = (function () {
         float: 'float',
         long: 'int',
         integer: 'int',
+        double: 'float',
         date: 'datetime',
         boolean: 'bool',
         geo_point: 'string'
@@ -61,11 +62,7 @@ var elasticsearchConnector = (function () {
                 context: connectionData,
                 dataType: 'json',
                 beforeSend: function (xhr) {
-                    if (connectionData.elasticsearchAuthenticate && tableau.username) {
-                        xhr.setRequestHeader("Authorization", "Basic " +
-                            btoa(tableau.username + ":" + tableau.password));
-                    }
-
+                    beforeSendAddAuthHeader(xhr, connectionData);
                 },
                 success: function (data) {
                     clearError();
@@ -154,8 +151,10 @@ var elasticsearchConnector = (function () {
         var connectionData = JSON.parse(tableau.connectionData);
 
         if (connectionData.elasticsearchAuthenticate) {
+            var creds = getAuthCredentials(connectionData);
+
             console.log('[getTableData] Using HTTP Basic Auth, username: ' +
-                tableau.username + ', password: ' + tableau.password);
+                creds.username + ', password: ' + creds.password.replace(/./gm, "*"));
         }
 
         if (connectionData.elasticsearchResultMode == "search") {
@@ -232,6 +231,13 @@ var elasticsearchConnector = (function () {
         queryEditor = ace.edit("divElasticsearchQueryEditor");
         queryEditor.setTheme("ace/theme/github");
         queryEditor.getSession().setMode("ace/mode/json");
+
+        // Initialize Bootstrap popovers
+        $('#iconUseSyncClientWorkaround').popover({
+            container: "body",
+            trigger: "hover"
+        });
+
 
         $('#cbUseQuery').change(function () {
             if ($(this).is(":checked")) {
@@ -544,11 +550,7 @@ var elasticsearchConnector = (function () {
             contentType: 'application/json',
             dataType: 'json',
             beforeSend: function (xhr) {
-                if (connectionData.elasticsearchAuthenticate && tableau.username) {
-                    xhr.setRequestHeader("Authorization", "Basic " +
-                        btoa(tableau.username + ":" + tableau.password));
-                }
-
+                beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
 
@@ -594,11 +596,7 @@ var elasticsearchConnector = (function () {
             contentType: 'application/json',
             dataType: 'json',
             beforeSend: function (xhr) {
-                if (connectionData.elasticsearchAuthenticate && tableau.username) {
-                    xhr.setRequestHeader("Authorization", "Basic " +
-                        btoa(tableau.username + ":" + tableau.password));
-                }
-
+                beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
 
@@ -635,11 +633,7 @@ var elasticsearchConnector = (function () {
             contentType: 'application/json',
             dataType: 'json',
             beforeSend: function (xhr) {
-                if (connectionData.elasticsearchAuthenticate && tableau.username) {
-                    xhr.setRequestHeader("Authorization", "Basic " +
-                        btoa(tableau.username + ":" + tableau.password));
-                }
-
+                beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
 
@@ -703,11 +697,7 @@ var elasticsearchConnector = (function () {
             data: JSON.stringify(requestData),
             dataType: 'json',
             beforeSend: function (xhr) {
-                if (connectionData.elasticsearchAuthenticate && tableau.username) {
-                    xhr.setRequestHeader("Authorization", "Basic " +
-                        btoa(tableau.username + ":" + tableau.password));
-                }
-
+                beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
 
@@ -749,11 +739,7 @@ var elasticsearchConnector = (function () {
             data: JSON.stringify(requestData),
             dataType: 'json',
             beforeSend: function (xhr) {
-                if (connectionData.elasticsearchAuthenticate && tableau.username) {
-                    xhr.setRequestHeader("Authorization", "Basic " +
-                        btoa(tableau.username + ":" + tableau.password));
-                }
-
+                beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
                 clearError();
@@ -840,9 +826,17 @@ var elasticsearchConnector = (function () {
             // If we have a limit, retrieve up to that limit, otherwise
             // wait until we have no more results returned
 
-            var moreRecords = connectionData.limit ? totalCount < connectionData.limit : data.hits.hits.length > 0;
+            var moreRecords = connectionData.limit ?
+                totalCount < connectionData.limit :
+                data.hits.hits.length > 0;
+
+            if(totalCount >= searchHitsTotal){
+                console.log("[processSearchResults] Total search hits less or equal to the records already retrieved - no more records");
+                moreRecords = false;
+            }
+
             console.log('[processSearchResults] total processed ' + totalCount + ', limit: ' +
-                connectionData.limit + ' more records?: ' + moreRecords);
+                connectionData.limit + ' more records?: ' + moreRecords + ', total search hits: ' + searchHitsTotal);
 
             tableau.dataCallback(toRet, data._scroll_id, moreRecords);
 
@@ -893,11 +887,7 @@ var elasticsearchConnector = (function () {
             data: JSON.stringify(requestData),
             dataType: 'json',
             beforeSend: function (xhr) {
-                if (connectionData.elasticsearchAuthenticate && tableau.username) {
-                    xhr.setRequestHeader("Authorization", "Basic " +
-                        btoa(tableau.username + ":" + tableau.password));
-                }
-
+                beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
 
@@ -1250,6 +1240,7 @@ var elasticsearchConnector = (function () {
         var limit = parseInt($('#inputTotalLimit').val()) == NaN ? null : parseInt($('#inputTotalLimit').val());
         var connectionName = $('#inputConnectionName').val();
         var auth = $('#cbUseBasicAuth').is(':checked');
+        var syncClientWorkaround = $('#cbUseSyncClientWorkaround').is(':checked');
         var username = $('#inputUsername').val();
         var password = $('#inputPassword').val();
         var esUrl = $('#inputElasticsearchUrl').val();
@@ -1272,6 +1263,7 @@ var elasticsearchConnector = (function () {
             elasticsearchResultMode: resultMode,
             elasticsearchAggregationData: aggregationData,
             elasticsearchAggQuery: esAggQuery,
+            useSyncClientWorkaround: syncClientWorkaround,
             fields: elasticsearchFields,
             fieldsMap: elasticsearchFieldsMap,
             aggFieldsMap: elasticsearchAggsMap,
@@ -1280,12 +1272,6 @@ var elasticsearchConnector = (function () {
             batchSize: max_iterations,
             limit: limit
         };
-
-        // Update Tableau auth parameters if supplied
-        if (connectionData.elasticsearchAuthenticate) {
-            tableau.username = connectionData.elasticsearchUsername;
-            tableau.password = connectionData.elasticsearchPassword;
-        }
 
         return connectionData;
     };
@@ -1300,18 +1286,45 @@ var elasticsearchConnector = (function () {
             });
         }
 
-        if (connectionData.elasticsearchAuthenticate) {
+        // Don't store username/password in the tableau.username/tableau.password properties
+        // as these cause issues with the Online Sync Client
+        if(!connectionData.useSyncClientWorkaround){
             tableau.username = connectionData.elasticsearchUsername;
             tableau.password = connectionData.elasticsearchPassword;
-        }
 
-        delete connectionData.elasticsearchUsername;
-        delete connectionData.elasticsearchPassword;
+            delete connectionData.elasticsearchUsername;
+            delete connectionData.elasticsearchPassword;
+        }
 
         tableau.connectionData = JSON.stringify(connectionData);
 
         console.log('[updateTableauConnectionData] Connection data: ' + tableau.connectionData);
         return connectionData;
+    };
+
+    var getAuthCredentials = function(connectionData){
+
+        if(connectionData.useSyncClientWorkaround){
+            return {
+                username: connectionData.elasticsearchUsername,
+                password: connectionData.elasticsearchPassword
+            };
+        }
+        else{
+            return {
+                username: tableau.username,
+                password: tableau.password
+            };
+        }
+    };
+
+    var beforeSendAddAuthHeader = function(xhr, connectionData){
+        
+        var creds = getAuthCredentials(connectionData);
+
+        if (connectionData.elasticsearchAuthenticate && creds.username) {
+            xhr.setRequestHeader("Authorization", "Basic " + btoa(creds.username + ":" + creds.password));
+        }
     };
 
     var aggregationData;
@@ -1328,5 +1341,7 @@ var elasticsearchConnector = (function () {
     }
 
 })();
+
+console.log("[ElasticsearchConnector]", elasticsearchConnector);
 
 console.log("[ElasticsearchConnector]", elasticsearchConnector);
