@@ -83,6 +83,14 @@
               <input id="cbUseBasicAuth" type="checkbox">Use HTTP Basic Authentication?
             </label>
           </div>
+          <div class="checkbox basic-auth-control" style="display: none;">
+            <label>
+              <input id="cbUseSyncClientWorkaround" type="checkbox">Use Online Sync Client workaround?
+              <i id="iconUseSyncClientWorkaround" class="glyphicon glyphicon-info-sign"
+                 title="Use Sync Client Workaround" 
+                 data-content="When checked, the datasource will store the username and password credentials used to authenticate to Elasticsearch as normal connection properties.  This works around an issue in refreshing web data connector sources that use authentication in the Online Sync Client.  Storing credentials as connection properties means that they are written in cleartext in log files and other places the datasource is persisted.  If you don't intend to use the Online Sync Client then keep this option unchecked."></i>
+            </label>
+          </div>
           <div class="form-group basic-auth-control" style="display: none;">
             <label for="inputUsername">Username</label>
             <input class="form-control" id="inputUsername" placeholder="Elasticsearch username" autocomplete="off">
