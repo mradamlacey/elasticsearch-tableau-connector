@@ -4,14 +4,61 @@ var aggregations = (function () {
 
         var self = this;
 
+        self.tableauData = {};
+        self.tableauDataSubscription = null;
+        self.setTableauData = function(tableauData){
+
+            if(self.tableauDataSubscription){
+                self.tableauDataSubscription.dispose();
+            }
+
+            if(!ko.isObservable(tableauData)){
+                return console.error("[Aggregations] Bad argument to setTableauData, not an observable value");
+            }
+
+            self.tableauDataSubscription = tableauData.subscribe(function(newValue){
+
+                if(!_.isObject(newValue)){
+                    return;
+                }
+
+                if(_.trim(self.tableauData.elasticsearchUrl) != _.trim(newValue.elasticsearchUrl)){
+                    self.metrics.removeAll();
+                    self.buckets.removeAll()
+                }
+
+                self.tableauData = newValue;
+            });
+
+            self.tableauData = tableauData();
+        };
+
         self.useCustomQuery = ko.observable(false);
+
+        self.useCustomQuery.subscribe(function(newValue){
+            self.aggregationFilter("");
+            self.buckets.removeAll();
+            self.metrics.removeAll();
+            self.customQuery("");
+        });
+        self.customQuery = ko.observable();
+
         self.useAggFilter = ko.observable(false);
 
         self.aggregationFilter = ko.observable();
 
+        self.clear = function(){
+            self.useCustomQuery(false);
+            self.customQuery("");
+            self.useAggFilter(false);
+            self.aggregationFilter("");
+            self.buckets.removeAll();
+            self.metrics.removeAll();
+        }
+
         self.addMetric = function(){
 
-            var connectionData = elasticsearchConnector.getTableauConnectionData();
+            var connectionData = self.tableauData;
             if(_.isEmpty(connectionData.elasticsearchUrl)){
                 return elasticsearchConnector.abort("Must provide Elasticsearch URL to add metrics");
             }
@@ -37,7 +84,7 @@ var aggregations = (function () {
 
         self.addBucket = function(){
 
-            var connectionData = elasticsearchConnector.getTableauConnectionData();
+            var connectionData = self.tableauData;
             if(_.isEmpty(connectionData.elasticsearchUrl)){
                 return elasticsearchConnector.abort("Must provide Elasticsearch URL to add metrics");
             }
@@ -84,7 +131,7 @@ var aggregations = (function () {
             console.log("[Aggregations] Getting updated type mapping information");
             self.fields.removeAll();
 
-            elasticsearchConnector.getElasticsearchTypeMapping(elasticsearchConnector.getTableauConnectionData(),
+            elasticsearchConnector.getElasticsearchTypeMapping(self.tableauData,
                 function (err, data, connectionData) {
 
                     if (err) {
@@ -168,10 +215,10 @@ var aggregations = (function () {
         self.field = ko.observable(field);
 
         self.type.subscribe(function(newValue){
-            updateAggregationData();
+
         });
         self.field.subscribe(function(newValue){
-            updateAggregationData();
+
         });
     };
 
@@ -313,29 +360,27 @@ var aggregations = (function () {
 
         self.type.subscribe(function(newValue){
             self.updateFields();
-            updateAggregationData();
         });
         self.field.subscribe(function(newValue){
-            updateAggregationData();
+
         });
         self.termSize.subscribe(function(newValue){
-            updateAggregationData();
+
         });
         self.dateHistogramType.subscribe(function(newValue){
             if(newValue != "Custom"){
                 self.dateHistogramCustomInterval("");
             }
 
-            updateAggregationData();
         });
         self.dateHistogramCustomInterval.subscribe(function(newValue){
-            updateAggregationData();
+
         });
         self.ranges.subscribe(function(newValue){
-            updateAggregationData();
+
         });
         self.dateRanges.subscribe(function(newValue){
-            updateAggregationData();
+
         });
 
     };
@@ -354,35 +399,32 @@ var aggregations = (function () {
         self.toType = ko.observable(toType ? toType : 'Relative');
 
         self.from.subscribe(function(newValue){
-            updateAggregationData();
+
         });
         self.to.subscribe(function(newValue){
-            updateAggregationData();
+
         });
         self.relativeNumFrom.subscribe(function(newValue){            
-            updateAggregationData();
+
         });
         self.relativeNumTo.subscribe(function(newValue){            
-            updateAggregationData();
+
         });
         self.fromRelative.subscribe(function(newValue){            
-            updateAggregationData();
+
         });
         self.toRelative.subscribe(function(newValue){            
-            updateAggregationData();
+
         });
         self.fromType.subscribe(function(newValue){
             self.from("");
-            updateAggregationData();
         });
         self.toType.subscribe(function(newValue){
             self.to("");
-            updateAggregationData();
         });
     };
 
     var vm = new AggregationsViewModel();
-    ko.applyBindings(vm);
 
     vm.useCustomQuery.subscribe(function(newValue) {
         console.log("[Aggregations] Removing all metrics and buckets");
@@ -392,11 +434,11 @@ var aggregations = (function () {
     });
 
     vm.metrics.subscribe(function(newValue){
-        updateAggregationData();
+
     });
 
     vm.buckets.subscribe(function(newValue){
-        updateAggregationData();
+
     });
 
     vm.useAggFilter.subscribe(function(newValue){
@@ -404,15 +446,14 @@ var aggregations = (function () {
         if(!newValue){
             vm.aggregationFilter("");
         }
-        updateAggregationData();
+
     });
 
     vm.aggregationFilter.subscribe(function(){
-        updateAggregationData();
+
     });
 
-    var updateAggregationData = function(){
-
+    var getAggregationData = function(){
         var metrics = _.map(vm.getMetrics(), function(metric){
             return {
                 type: metric.type() ? metric.type() : null,
@@ -486,10 +527,15 @@ var aggregations = (function () {
         var data = {
             filter: vm.useAggFilter() ? vm.aggregationFilter() : null,
             metrics: metrics,
-            buckets: buckets
+            buckets: buckets,
+            useCustomQuery: vm.useCustomQuery(),
+            customQuery: vm.customQuery()
         };
-        elasticsearchConnector.updateAggregationData(data);
-    };
+
+        return data;
+    }
+
+    vm.getAggregationData = getAggregationData;
 
     return vm;
 })();

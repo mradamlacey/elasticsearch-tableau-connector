@@ -96,6 +96,7 @@ var elasticsearchConnector = (function () {
                 }
             });
     }
+    
 
     function abort(errorMessage, kill) {
 
@@ -136,7 +137,6 @@ var elasticsearchConnector = (function () {
             abort("Error parsing tableau connection data: \n", ex);
             return;
         }
-
 
         console.log('getColumnHeaders called, headers: ' + _.pluck(connectionData.fields, 'name').join(', '));
         tableau.headersCallback(_.pluck(connectionData.fields, 'name'), _.pluck(connectionData.fields, 'dataType'));
@@ -230,10 +230,6 @@ var elasticsearchConnector = (function () {
 
     var initUIControls = function () {
 
-        queryEditor = ace.edit("divElasticsearchQueryEditor");
-        queryEditor.setTheme("ace/theme/github");
-        queryEditor.getSession().setMode("ace/mode/json");
-
         // Initialize Bootstrap popovers
 
         $('#iconUseSyncClientWorkaround').popover({
@@ -250,266 +246,133 @@ var elasticsearchConnector = (function () {
             content: "Use Query String syntax to define a filter to apply to the data that is aggregated.  Refer to: <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax'>Query String Syntax</a>"           
         });
 
-        $('#cbUseQuery').change(function () {
-            if ($(this).is(":checked")) {
-                $('#divQuery').css('display', 'block');
-            }
-            else {
-                $('#divQuery').css('display', 'none');
-                $('#inputUsername').val('');
-                $('#inputPassword').val('');
-            }
-
-            updateTableauConnectionData();
-        });
-
-        $('#cbUseBasicAuth').change(function () {
-            if ($(this).is(":checked")) {
-                $('.basic-auth-control').css('display', 'block');
-            }
-            else {
-                $('.basic-auth-control').css('display', 'none');
-                queryEditor.setValue('');
-            }
-
-            updateTableauConnectionData();
-        });
-
-        var handleResultModeCheckbox = function () {
-            var mode = $("input:radio[name='resultmode']:checked").val();
-
-            switch (mode) {
-                case "search":
-
-                    console.log("[initUIControls] Showing search result mode controls");
-
-                    $("#divAggregationResultControls").hide();
-                    $("#divSearchResultControls").show();
-                    break;
-
-                case "aggregation":
-
-                    console.log("[initUIControls] Showing aggregation result mode controls");
-
-                    $("#divSearchResultControls").hide();
-                    $("#divAggregationResultControls").show();
-                    break;
-            }
-        };
-
-        $(document).on("change", "input:radio[name='resultmode']", handleResultModeCheckbox);
-
-        handleResultModeCheckbox.call($("input:radio[name='resultmode']"));
-
-
-        aggQueryEditor = ace.edit("divElasticsearchAggQueryEditor");
-        aggQueryEditor.setTheme("ace/theme/github");
-        aggQueryEditor.getSession().setMode("ace/mode/json");
-
-        $('#cbUseAggregationQuery').change(handleUseAggregationQueryCheckbox);
-
-        var handleUseAggregationQueryCheckbox = function () {
-            console.log('[initUIControls] handling use aggregation query CB change');
-
-            if ($(this).is(":checked")) {
-                $('#divAggregationQuery').css('display', 'block');
-            }
-            else {
-                $('#divAggregationQuery').css('display', 'none');
-                aggQueryEditor.setValue('');
-            }
-
-            updateTableauConnectionData();
-        }
-
-        handleUseAggregationQueryCheckbox.call($('#cbUseAggregationQuery'));
-
-        $("#submitButton").click(function (e) { // This event fires when a button is clicked
-            e.preventDefault();
-
-            var connectionData = getTableauConnectionData();
-
-            switch (connectionData.elasticsearchResultMode) {
-                case "search":
-                    // Retrieve the Elasticsearch mapping before we call tableau submit
-                    // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
-                    // asynchronously
-                    getElasticsearchTypeMapping(getTableauConnectionData(), function (err, data, connectionData) {
-
-                        if (err) {
-                            abort(err);
-                            return;
-                        }
-
-                        var indexName = connectionData.elasticsearchIndex;
-
-                        // Then we selected an alias... choose the last index with a matching type name
-                        // TODO: Let user choose which type from which index
-                        if (data[connectionData.elasticsearchIndex] == null) {
-                            _.forIn(data, function (index, indexKey) {
-                                if (index.mappings[connectionData.elasticsearchType]) {
-                                    indexName = indexKey;
-                                }
-                            });
-                        }
-
-                        if(data[indexName] == null){
-                            return abort("No mapping found for type: " + connectionData.elasticsearchType + " in index: " + indexName);
-                        }
-
-                        if(data[indexName].mappings == null){
-                            return abort("No mapping found for index: " + indexName);
-                        }
-
-                        if(data[indexName].mappings[connectionData.elasticsearchType] == null){
-                            return abort("No mapping properties found for type: " + connectionData.elasticsearchType + " in index: " + indexName);
-                        }
-
-                        addElasticsearchField('_id', 'string');
-                        addElasticsearchField('_sequence', 'integer');
-
-                        _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
-                            // TODO: Need to support nested objects and arrays in some way
-                            addElasticsearchField(key, val.type, val.format, val.lat_lon)
-                        });
-
-                        console.log('[submit] Number of header columns: ' + elasticsearchFields.length);
-
-                        var connectionName = connectionData.connectionName;
-                        tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
-
-                        updateTableauConnectionData();
-
-                        startTime = moment();
-                        $('#myPleaseWait').modal('show');
-                        if (tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
-                            console.log('[submit] Submitting tableau interactive phase data');
-                            tableau.submit();
-                        }
-                        else {
-                            abortWithError('Invalid phase: ' + tableau.phase + ' aborting', true);
-                        }
-
-                    });
-                    break;
-
-                case "aggregation":
-
-                    var aggsQuery;
-
-                    // If not using a custom query - build the request payload based on what
-                    // the user has configured
-                    if(_.isEmpty(connectionData.elasticsearchAggQuery)){
-
-                        aggsQuery = buildAggregationRequest(aggregationData);
-                    }
-                    else{
-                        try {
-                            aggsQuery = JSON.parse(connectionData.elasticsearchAggQuery);
-                        }
-                        catch (err) {
-                            return abort("Error parsing aggregation query, error: " + err);
-                        }
-                    }
-
-                    var aggregations = aggsQuery.aggregations ? aggsQuery.aggregations : aggsQuery.aggs;
-                    if (!aggregations) {
-                        return abort("Aggregation query must include 'aggregations' or 'aggs' property");
-                    }
-
-                    var bucketAggs = parseAggregations(aggregations, "buckets");
-
-                    var metricAggs = parseAggregations(aggregations, "metrics");
-                    // TODO: Add validation that checks if we found metrics at any other level besides the deepest
-
-                    _.each(bucketAggs, function (bucketAgg) {
-                        addElasticsearchField(bucketAgg.name, bucketAgg.type, bucketAgg.format, null)
-                    });
-                    _.each(metricAggs, function (metricAgg) {
-                        addElasticsearchField(metricAgg.name, metricAgg.type, metricAgg.format, null)
-                    });
-
-                    console.log('[submit] Number of header columns: ' + elasticsearchFields.length);
-
-                    var connectionName = connectionData.connectionName;
-                    tableau.connectionName = connectionName ? connectionName : "Elasticsearch Datasource";
-
-                    updateTableauConnectionData();
-
-                    startTime = moment();
-                    $('#myPleaseWait').modal('show');
-                    if (tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
-                        console.log('[submit] Submitting tableau interactive phase data');
-                        tableau.submit();
-                    }
-                    else {
-                        abortWithError('Invalid phase: ' + tableau.phase + ' aborting', true);
-                    }
-
-                    break;
-            }
-
-
-        });
-
-        $("#inputElasticsearchIndexTypeahead").typeahead({
-            source: function (something, cb) {
-
-                $('.index-icon').toggleClass('hide');
-
-                getElasticsearchIndices(function (err, indices) {
-
-                    if (err) {
-                        $('.index-icon').toggleClass('hide');
-                        return abort(err);
-                    }
-
-                    getElasticsearchAliases(function (err, aliases) {
-
-                        $('.index-icon').toggleClass('hide');
-
-                        if (err) {
-                            return abort(err);
-                        }
-                        var sourceData = indices.concat(_.uniq(aliases));
-
-                        // Return the actual list of items to the control
-                        cb(sourceData);
-                    });
-
-                });
-            },
-            autoSelect: true,
-            showHintOnFocus: true,
-            items: 'all',
-            afterSelect: function(){
-
-            }
-        });
-
-        $("#inputElasticsearchTypeTypeahead").typeahead({
-            source: function (something, cb) {
-
-                $('.type-icon').toggleClass('hide');
-
-                var connectionData = getTableauConnectionData();
-                getElasticsearchTypes(connectionData.elasticsearchIndex, function (err, types) {
-                    $('.type-icon').toggleClass('hide');
-
-                    if (err) {
-                        return abort(err);
-                    }
-
-                    // Return the actual list of items to the control
-                    cb(types);
-                });
-            },
-            autoSelect: true,
-            showHintOnFocus: true,
-            items: 'all'
+        $("#submitButton").click(function (e) { // This event fires when a button is clicked            
+            console.log("[Elasticsearch Connector] - Submit - noop")
         });
 
     };
+
+    var getElasticsearchConnectionFieldInfo = function (connectionData, cb) {
+
+        switch (connectionData.elasticsearchResultMode) {
+            case "search":
+                // Retrieve the Elasticsearch mapping before we call tableau submit
+                // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
+                // asynchronously
+                getElasticsearchTypeMapping(connectionData, function (err, data, connectionData) {
+
+                    if (err) {
+                        if(cb) cb(err);
+                        return abort(err);
+                    }
+
+                    var indexName = connectionData.elasticsearchIndex;
+
+                    // Then we selected an alias... choose the last index with a matching type name
+                    // TODO: Let user choose which type from which index
+                    if (data[connectionData.elasticsearchIndex] == null) {
+                        _.forIn(data, function (index, indexKey) {
+                            if (index.mappings[connectionData.elasticsearchType]) {
+                                indexName = indexKey;
+                            }
+                        });
+                    }
+
+                    var errMsg = null;
+                    if (data[indexName] == null) {
+                        errMsg = "No mapping found for type: " + connectionData.elasticsearchType + " in index: " + indexName;
+                    }
+                    if (data[indexName].mappings == null) {
+                        errMsg = "No mapping found for index: " + indexName;
+                    }
+                    if (data[indexName].mappings[connectionData.elasticsearchType] == null) {
+                        errMsg = "No mapping properties found for type: " + connectionData.elasticsearchType + " in index: " + indexName;
+                    }
+
+                    if(errMsg){
+                        if(cb) cb(errMsg);
+                        return abort(errMsg);
+                    }
+
+                    addElasticsearchField('_id', 'string');
+                    addElasticsearchField('_sequence', 'integer');
+
+                    _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
+                        // TODO: Need to support nested objects and arrays in some way
+                        addElasticsearchField(key, val.type, val.format, val.lat_lon)
+                    });
+
+                    console.log('[getElasticsearchConnectionFieldInfo] Number of header columns: ' + elasticsearchFields.length);
+
+                    var fieldData = {
+                        elasticsearchAggQuery: aggQueryEditor ? aggQueryEditor.getValue() : null,
+                        fields: elasticsearchFields,
+                        fieldsMap: elasticsearchFieldsMap,
+                        aggFieldsMap: elasticsearchAggsMap,
+                        dateFields: elasticsearchDateFields,
+                        geoPointFields: elasticsearchGeoPointFields
+                    };
+
+                    if (cb) cb(null, fieldData);
+
+                });
+                break;
+
+            case "aggregation":
+
+                var aggsQuery;
+
+                // If not using a custom query - build the request payload based on what
+                // the user has configured
+                if (_.isEmpty(connectionData.elasticsearchAggregationData.customQuery)) {
+
+                    aggsQuery = buildAggregationRequest(connectionData.elasticsearchAggregationData);
+                }
+                else {
+                    try {
+                        aggsQuery = JSON.parse(connectionData.elasticsearchAggregationData.customQuery);
+                    }
+                    catch (err) {
+                        if(cb) cb(err);
+                        return abort("Error parsing aggregation query, error: " + err);
+                    }
+                }
+
+                var aggregations = aggsQuery.aggregations ? aggsQuery.aggregations : aggsQuery.aggs;
+                if (!aggregations) {
+                    if(cb) cb(err);
+                    return abort("Aggregation query must include 'aggregations' or 'aggs' property");
+                }
+
+                var bucketAggs = parseAggregations(aggregations, "buckets");
+
+                var metricAggs = parseAggregations(aggregations, "metrics");
+                // TODO: Add validation that checks if we found metrics at any other level besides the deepest
+
+                _.each(bucketAggs, function (bucketAgg) {
+                    addElasticsearchField(bucketAgg.name, bucketAgg.type, bucketAgg.format, null)
+                });
+                _.each(metricAggs, function (metricAgg) {
+                    addElasticsearchField(metricAgg.name, metricAgg.type, metricAgg.format, null)
+                });
+
+                console.log('[getElasticsearchConnectionFieldInfo] Number of header columns: ' + elasticsearchFields.length);
+
+                var fieldData = {
+                    elasticsearchAggQuery: aggsQuery,
+                    fields: elasticsearchFields,
+                    fieldsMap: elasticsearchFieldsMap,
+                    aggFieldsMap: elasticsearchAggsMap,
+                    dateFields: elasticsearchDateFields,
+                    geoPointFields: elasticsearchGeoPointFields
+                };
+
+                if (cb) cb(null, fieldData);
+
+                break;
+        }
+
+    }
 
     var buildAggregationRequest = function(data){
 
@@ -650,7 +513,7 @@ var elasticsearchConnector = (function () {
 
         return aggsQuery;
     };
-
+/*
     var getElasticsearchTypes = function (indexName, cb) {
 
         var connectionData = getTableauConnectionData();
@@ -696,85 +559,7 @@ var elasticsearchConnector = (function () {
             }
         });
     }
-
-    var getElasticsearchIndices = function (cb) {
-
-        var connectionData = getTableauConnectionData();
-
-        if (!connectionData.elasticsearchUrl) {
-            return;
-        }
-
-        var connectionUrl = connectionData.elasticsearchUrl + '/_mapping';
-
-        var xhr = $.ajax({
-            url: connectionUrl,
-            method: 'GET',
-            contentType: 'application/json',
-            dataType: 'json',
-            beforeSend: function (xhr) {
-                beforeSendAddAuthHeader(xhr, connectionData);
-            },
-            success: function (data) {
-
-                clearError();
-
-                var indices = _.keys(data);
-
-                cb(null, indices);
-            },
-            error: function (xhr, ajaxOptions, err) {
-                if (xhr.status == 0) {
-                    cb('Unable to get Elasticsearch indices, unable to connect to host or CORS request was denied');
-                }
-                else {
-                    cb("Unable to get Elasticsearch indices, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
-                }
-            }
-        });
-    }
-
-    var getElasticsearchAliases = function (cb) {
-
-        var connectionData = getTableauConnectionData();
-
-        if (!connectionData.elasticsearchUrl) {
-            return;
-        }
-
-        var connectionUrl = connectionData.elasticsearchUrl + '/_aliases';
-
-        var xhr = $.ajax({
-            url: connectionUrl,
-            method: 'GET',
-            contentType: 'application/json',
-            dataType: 'json',
-            beforeSend: function (xhr) {
-                beforeSendAddAuthHeader(xhr, connectionData);
-            },
-            success: function (data) {
-
-                clearError();
-
-                var aliasMap = {},
-                    aliases = [];
-
-                _.forIn(data, function (value, key) {
-                    aliases = aliases.concat(_.keys(value.aliases));
-                });
-
-                cb(null, aliases);
-            },
-            error: function (xhr, ajaxOptions, err) {
-                if (xhr.status == 0) {
-                    cb('Unable to get Elasticsearch aliases, unable to connect to host or CORS request was denied');
-                }
-                else {
-                    cb("Unable to get Elasticsearch aliases, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
-                }
-            }
-        });
-    };
+    */
 
     var openSearchScrollWindow = function (cb) {
 
@@ -977,13 +762,13 @@ var elasticsearchConnector = (function () {
 
         var requestData = {};
 
-        var strippedQuery = $.trim(connectionData.elasticsearchAggQuery);
+        var strippedQuery = $.trim(connectionData.elasticsearchAggregationData.customQuery);
         if (!_.isEmpty(strippedQuery)){
             try {
-                requestData = JSON.parse(connectionData.elasticsearchAggQuery);
+                requestData = JSON.parse(connectionData.elasticsearchAggregationData.customQuery);
             }
             catch (err) {
-                var errMsg = "Error parsing custom aggregation query: " + connectionData.elasticsearchAggQuery + "\nError:" + err;
+                var errMsg = "Error parsing custom aggregation query: " + connectionData.elasticsearchAggregationData.customQuery + "\nError:" + err;
                 if(cb) cb(errMsg);
 
                 return abort(errMsg);
@@ -1358,15 +1143,16 @@ var elasticsearchConnector = (function () {
 
     }
 
+/*
     var getTableauConnectionData = function () {
 
         var max_iterations = parseInt($('#inputBatchSize').val()) == NaN ? 10 : parseInt($('#inputBatchSize').val());
         var limit = parseInt($('#inputTotalLimit').val()) == NaN ? null : parseInt($('#inputTotalLimit').val());
         var connectionName = $('#inputConnectionName').val();
-        var auth = $('#cbUseBasicAuth').is(':checked');
-        var syncClientWorkaround = $('#cbUseSyncClientWorkaround').is(':checked');
-        var username = $('#inputUsername').val();
-        var password = $('#inputPassword').val();
+        //var auth = $('#cbUseBasicAuth').is(':checked');
+        //var syncClientWorkaround = $('#cbUseSyncClientWorkaround').is(':checked');
+        //var username = $('#inputUsername').val();
+        //var password = $('#inputPassword').val();
         var esUrl = $('#inputElasticsearchUrl').val();
         var esIndex = $('#inputElasticsearchIndexTypeahead').val();
         var esType = $('#inputElasticsearchTypeTypeahead').val();
@@ -1378,16 +1164,16 @@ var elasticsearchConnector = (function () {
         var connectionData = {
             connectionName: connectionName,
             elasticsearchUrl: esUrl,
-            elasticsearchAuthenticate: auth,
-            elasticsearchUsername: username,
-            elasticsearchPassword: password,
+           // elasticsearchAuthenticate: auth,
+           // elasticsearchUsername: username,
+           // elasticsearchPassword: password,
             elasticsearchIndex: esIndex,
             elasticsearchType: esType,
             elasticsearchQuery: esQuery,
             elasticsearchResultMode: resultMode,
             elasticsearchAggregationData: aggregationData,
             elasticsearchAggQuery: esAggQuery,
-            useSyncClientWorkaround: syncClientWorkaround,
+          //  useSyncClientWorkaround: syncClientWorkaround,
             fields: elasticsearchFields,
             fieldsMap: elasticsearchFieldsMap,
             aggFieldsMap: elasticsearchAggsMap,
@@ -1399,32 +1185,7 @@ var elasticsearchConnector = (function () {
 
         return connectionData;
     };
-
-    var updateTableauConnectionData = function (updatedMap) {
-
-        var connectionData = getTableauConnectionData();
-
-        if (updatedMap) {
-            _.forIn(updateMap, function (val, key) {
-                connectionData[key] = val;
-            });
-        }
-
-        // Don't store username/password in the tableau.username/tableau.password properties
-        // as these cause issues with the Online Sync Client
-        if(!connectionData.useSyncClientWorkaround){
-            tableau.username = connectionData.elasticsearchUsername;
-            tableau.password = connectionData.elasticsearchPassword;
-
-            delete connectionData.elasticsearchUsername;
-            delete connectionData.elasticsearchPassword;
-        }
-
-        tableau.connectionData = JSON.stringify(connectionData);
-
-        console.log('[updateTableauConnectionData] Connection data: ' + tableau.connectionData);
-        return connectionData;
-    };
+*/    
 
     var getAuthCredentials = function(connectionData){
 
@@ -1456,36 +1217,14 @@ var elasticsearchConnector = (function () {
         aggregationData = data;
     };
 
-    // Custom knockout bindings
-
-    // Bootstrap DatePicker
-    ko.bindingHandlers.bootstrapDatePicker = {
-        init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
-            $(element).datepicker({
-               todayBtn: "linked"
-            });
-        }
-    };
-
-    ko.bindingHandlers.bootstrapPopover = {
-     init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
-            $(element).popover({            
-                container: "body",
-                trigger: "hover"
-            });
-        }   
-    }
-
     return {
-        getTableauConnectionData: getTableauConnectionData,
-        aggregationQueryEditor: aggQueryEditor,
         abort: abort,
-        getElasticsearchTypeMapping: getElasticsearchTypeMapping,
-        updateAggregationData: updateAggregationData
+        updateAggregationData: updateAggregationData,
+        getElasticsearchConnectionFieldInfo: getElasticsearchConnectionFieldInfo,
+        getElasticsearchTypeMapping: getElasticsearchTypeMapping
     }
 
 })();
 
 console.log("[ElasticsearchConnector]", elasticsearchConnector);
 
-console.log("[ElasticsearchConnector]", elasticsearchConnector);

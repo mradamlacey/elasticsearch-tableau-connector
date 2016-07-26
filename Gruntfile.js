@@ -70,7 +70,10 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'public/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'public/elasticsearch-connector.js', expand: false },
+            { src: 'connector/app.js', dest: 'public/app.js', expand: false },
             { src: 'connector/aggregations.js', dest: 'public/aggregations.js', expand: false },
+            { src: 'connector/tableauData.js', dest: 'public/tableauData.js', expand: false },
+            { src: 'connector/knockoutCustomBindings.js', dest: 'public/knockoutCustomBindings.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'public/bootstrap3-typeahead.js', expand: false },
             { src: 'resources/bootstrap-datepicker/js/bootstrap-datepicker.js', dest: 'public/bootstrap-datepicker.js', expand: false },
             { src: 'resources/bootstrap-datepicker/css/bootstrap-datepicker3.css', dest: 'public/bootstrap-datepicker.css', expand: false },
@@ -93,7 +96,10 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.js', expand: false },
             { src: 'connector/elasticsearch-connector.css', dest: 'dist-tmp/elasticsearch-connector.css', expand: false },
             { src: 'connector/elasticsearch-connector.js', dest: 'dist-tmp/elasticsearch-connector.js', expand: false },
+            { src: 'connector/app.js', dest: 'dist-tmp/app.js', expand: false },
             { src: 'connector/aggregations.js', dest: 'dist-tmp/aggregations.js', expand: false },
+            { src: 'connector/tableauData.js', dest: 'dist-tmp/tableauData.js', expand: false },
+            { src: 'connector/knockoutCustomBindings.js', dest: 'dist-tmp/knockoutCustomBindings.js', expand: false },
             { src: 'resources/bootstrap3-typeahead.js', dest: 'dist-tmp/bootstrap3-typeahead.js', expand: false },
             { src: 'resources/bootstrap-datepicker/js/bootstrap-datepicker.js', dest: 'dist-tmp/bootstrap-datepicker.js', expand: false },
             { src: 'resources/bootstrap-datepicker/css/bootstrap-datepicker3.css', dest: 'dist-tmp/bootstrap-datepicker.css', expand: false },
@@ -135,9 +141,12 @@ require('load-grunt-tasks')(grunt);
                         'dist-tmp/bootstrap-datepicker.js',
                         'dist-tmp/knockout.js',
                         'dist-tmp/lodash*.js',
-                        'dist-tmp/moment*.js',
+                        'dist-tmp/moment*.js',                        
                         'dist-tmp/elasticsearch-connector.js',
-                        'dist-tmp/aggregations.js'
+                        'dist-tmp/aggregations.js',
+                        'dist-tmp/tableauData.js',
+                        'dist-tmp/knockoutCustomBindings.js',
+                        'dist-tmp/app.js'
                     ]
               }
             }
