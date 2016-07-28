@@ -65,6 +65,8 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/bootstrap/dist/fonts/*.*', dest: 'public/fonts/', expand: true, flatten: true, filter: 'isFile' },
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'public/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'public/jquery.js', expand: false },
+            { src: 'bower_components/toastr/toastr.js', dest: 'public/toastr.js', expand: false },
+            { src: 'bower_components/toastr/toastr.css', dest: 'public/toastr.css', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'public/lodash.js', expand: false },
             { src: 'bower_components/knockout/dist/knockout.debug.js', dest: 'public/knockout.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'public/moment.js', expand: false },
@@ -91,6 +93,8 @@ require('load-grunt-tasks')(grunt);
             { src: 'bower_components/bootstrap/dist/fonts/*.*', dest: 'dist/fonts/', expand: true, flatten: true, filter: 'isFile' },
             { src: 'bower_components/bootstrap/dist/js/bootstrap.js', dest: 'dist-tmp/bootstrap.js', expand: false },
             { src: 'bower_components/jquery/dist/jquery.js', dest: 'dist-tmp/jquery.js', expand: false },
+            { src: 'bower_components/toastr/toastr.js', dest: 'dist-tmp/toastr.js', expand: false },
+            { src: 'bower_components/toastr/toastr.css', dest: 'dist-tmp/toastr.css', expand: false },
             { src: 'bower_components/lodash/lodash.js', dest: 'dist-tmp/lodash.js', expand: false },
             { src: 'bower_components/knockout/dist/knockout.js', dest: 'dist-tmp/knockout.js', expand: false },
             { src: 'bower_components/moment/min/moment.min.js', dest: 'dist-tmp/moment.js', expand: false },
@@ -139,6 +143,7 @@ require('load-grunt-tasks')(grunt);
                         'dist-tmp/bootstrap.js',
                         'dist-tmp/bootstrap3-typeahead.js',
                         'dist-tmp/bootstrap-datepicker.js',
+                        'dist-tmp/toastr.js',
                         'dist-tmp/knockout.js',
                         'dist-tmp/lodash*.js',
                         'dist-tmp/moment*.js',                        
@@ -160,6 +165,7 @@ require('load-grunt-tasks')(grunt);
             files: {
                 'dist/elasticsearch-connector.min.css': ['dist-tmp/bootstrap.css', 
                                                          'dist-tmp/bootstrap-datepicker.css', 
+                                                         'dist-tmp/toastr.css',
                                                          'dist-tmp/elasticsearch-connector.css']
             }
          }

@@ -7,6 +7,7 @@
     <!--(if target dev)><!-->
     <link rel="stylesheet" href="bootstrap.css">
     <link rel="stylesheet" href="bootstrap-datepicker.css">
+    <link rel="stylesheet" href="toastr.css"/>
     <link rel="stylesheet" href="elasticsearch-connector.css">
     <!--<!(endif)-->
     <!--(if target dist)><!-->
@@ -41,14 +42,6 @@
             </div>
         </div>
 
-        <div id="divError" class="row" data-bind="visible: errorMessage">
-            <div class="col-md-10 col-md-offset-1">
-                <div class="alert alert-danger">
-                    <p id="errorText" data-bind="text: errorMessage"></p>
-                </div>
-            </div>
-        </div>
-
         <div class="row no-tableau">
             <div class="col-md-10 col-md-offset-1">
                 <div class="alert alert-info">
@@ -78,25 +71,25 @@
                  data-content="When checked, the datasource will store the username and password credentials used to authenticate to Elasticsearch as normal connection properties.  This works around an issue in refreshing web data connector sources that use authentication in the Online Sync Client.  Storing credentials as connection properties means that they are written in cleartext in log files and other places the datasource is persisted.  If you don't intend to use the Online Sync Client then keep this option unchecked."></i>
             </label>
                 </div>
-                <div class="form-group basic-auth-control" data-bind="visible: useBasicAuthentication, css: { 'has-error': validation().username, 'has-feedback': validation().username }">
+                <div class="form-group required basic-auth-control" data-bind="visible: useBasicAuthentication, css: { 'has-error': validation().username, 'has-feedback': validation().username }">
                     <label for="inputUsername">Username</label>
                     <input class="form-control" id="inputUsername" placeholder="Elasticsearch username" autocomplete="off" data-bind="value: username">
                     <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().username"></span>
                     <span class="sr-only" data-bind="if: validation().username">(error)</span>
                 </div>
-                <div class="form-group basic-auth-control" data-bind="visible: useBasicAuthentication, css: { 'has-error': validation().password, 'has-feedback': validation().password }">
+                <div class="form-group required basic-auth-control" data-bind="visible: useBasicAuthentication, css: { 'has-error': validation().password, 'has-feedback': validation().password }">
                     <label for="inputPassword">Password</label>
                     <input type="password" class="form-control" id="inputPassword" autocomplete="off" data-bind="value: password">
                     <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().password"></span>
                     <span class="sr-only" data-bind="if: validation().password">(error)</span>
                 </div>
-                    <div class="form-group" data-bind="css: { 'has-error': validation().elasticsearchUrl, 'has-feedback': validation().elasticsearchUrl }">
+                    <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchUrl, 'has-feedback': validation().elasticsearchUrl }">
                     <label for="inputElasticsearchUrl">Elasticsearch URL</label>
                     <input class="form-control" id="inputElasticsearchUrl" placeholder="Elasticsearch URL" data-bind="value: elasticsearchUrl">
                     <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().elasticsearchUrl"></span>
                     <span class="sr-only" data-bind="if: validation().elasticsearchUrl">(error)</span>
                 </div>
-                <div class="form-group" data-bind="css: { 'has-error': validation().elasticsearchIndex, 'has-feedback': validation().elasticsearchIndex }">
+                <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchIndex, 'has-feedback': validation().elasticsearchIndex }">
                     <label for="inputElasticsearchIndexTypeahead">Index Name</label>
                     <input class="form-control" type="text" data-provide="typeahead" data-bind="typeahead, typeaheadSource: elasticsearchIndexSource, value: elasticsearchIndex"
                         autocomplete="off" placeholder="Name of index like 'index1'">
@@ -106,7 +99,7 @@
                     </input>
 
                 </div>
-                <div class="form-group" data-bind="css: { 'has-error': validation().elasticsearchType, 'has-feedback': validation().elasticsearchType }">
+                <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchType, 'has-feedback': validation().elasticsearchType }">
                     <label for="inputElasticsearchTypeTypeahead">Type</label>
                     <input class="form-control" type="text" data-provide="typeahead" data-bind="typeahead, typeaheadSource: elasticsearchTypeSource, value: elasticsearchType"
                         autocomplete="off" placeholder="Name of type like 'user'">
@@ -139,7 +132,7 @@
               <input id="cbUseQuery" type="checkbox" data-bind="checked: useCustomQuery">Use custom query?
             </label>
                     </div>
-                    <div id="divQuery" class="form-group" data-bind="visible: useCustomQuery">
+                    <div id="divQuery" class="form-group required" data-bind="visible: useCustomQuery">
                         <label for="textElasticsearchQuery">Query</label>
 
                         <div id="divElasticsearchQueryEditor" 
@@ -148,13 +141,13 @@
                         </div>
 
                     </div>
-                    <div class="form-group">
+                    <div class="form-group required">
                         <label for="inputBatchSize">Batch record size for each response</label>
-                        <input type="number" class="form-control" id="inputBatchSize" placeholder="Batch size per request" data-bind="value: batchSize">
+                        <input type="number" class="form-control" id="inputBatchSize" placeholder="Batch size per request" min="1" data-bind="value: batchSize">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group required">
                         <label for="inputTotalLimit">Limit on number of rows to extract</label>
-                        <input type="number" class="form-control" id="inputTotalLimit" placeholder="Total limit" data-bind="value: limit">
+                        <input type="number" class="form-control" id="inputTotalLimit" placeholder="Total limit" min="1" data-bind="value: limit">
                     </div>
 
                 </div>
@@ -165,9 +158,9 @@
 
                     <div class="checkbox">
                         <label>
-                <input id="cbUseAggregationQuery" type="checkbox"
-                       data-bind="checked: useCustomQuery" checked>Use custom query?
-              </label>
+                        <input id="cbUseAggregationQuery" type="checkbox"
+                               data-bind="checked: useCustomQuery" checked>Use custom query?
+                        </label>
                     </div>
 
                     <div id="divAggregationBuilder" class="form-group" data-bind="visible: !useCustomQuery()">
@@ -176,26 +169,35 @@
                             <label>
                           <input id="cbUseAggregationFilter" type="checkbox"
                                  data-bind="checked: useAggFilter" checked>Filter data included in aggregations?
-                      </label>
+                          </label>
+
                         </div>
 
                         <div class="form-group" data-bind="visible: useAggFilter">
 
-                            <div class="input-group input-group-unstyled">
+                            <div class="input-group required input-group-unstyled" 
+                                 data-bind="css: { 'has-error': validation().aggregationFilter, 'has-feedback': validation().aggregationFilter }">
                                 <label>Filter</label>
                                 <input type="text" class="form-control" placeholder="Enter filter using Query String syntax, e.g. 'field_name:match AND date:[2015-01-01 TO 2016-01-01] or _exists_:field_name'"
                                     data-bind="value: aggregationFilter">
 
+                                <!--
+                                <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().aggregationFilter"></span>
+                                -->
+                                <span class="sr-only" data-bind="if: validation().aggregationFilter">(error)</span>
+
                                 <span class="input-group-addon">
-                        <i id="iconInfoAggregationFilter" class="glyphicon glyphicon-info-sign input-group-inline-icon"
-                                            title="Aggregation Filter"></i>
-                    </span>
+                                    <i id="iconInfoAggregationFilter" class="glyphicon glyphicon-info-sign input-group-inline-icon"
+                                       title="Aggregation Filter"></i>
+                                </span>
+
+
                             </div>
 
                         </div>
 
                         <div class="aggregation-builder-container metrics-builder">
-                            <h4 class="agg-section">Metrics per Aggregation Bucket</h4>
+                            <h4 class="agg-section">Metrics per Aggregation Bucket</h4>                            
 
                             <div data-bind="foreach: { data: metrics }">
 
@@ -229,16 +231,19 @@
                             </div>
 
                             <button class="btn btn-default" data-bind="click: addMetric">Add Metric
-                        <span class="glyphicon glyphicon-stats" aria-hidden="true"></span>
-                      </button>
+                                <span class="glyphicon glyphicon-stats" aria-hidden="true"></span>
+                            </button>
+                            <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().metrics"></span>
                         </div>
 
                         <div class="aggregation-builder-container buckets-builder">
                             <h4 class="agg-section">Aggregation Buckets</h4>
-
+                            
                             <div data-bind="foreach: { data: buckets }">
 
-                                <div class="card" data-bind="css: 'bucket_level_' + $index()">
+                                <div data-bind="css: 'bucket_level_' + $index()"></div>
+
+                                <div class="card" data-bind="css: {'invalid': validation().messages.length > 0}">
 
                                     <div class="form-group">
                                         <div class="form-group">
@@ -270,10 +275,14 @@
                                             <select class="form-control" data-bind="options: $parent.dateHistogramIntervalOptions, value: dateHistogramType"></select>
                                         </div>
 
-                                        <div class="form-group" data-bind="visible: dateHistogramType() == 'Custom'">
+                                        <div class="form-group" 
+                                             data-bind="visible: dateHistogramType() == 'Custom', css: { 'has-error': validation().dateHistogramCustomInterval, 'has-feedback': validation().dateHistogramCustomInterval }">
                                             <label for="inputDateHistogramIntervalCustom">Custom Interval Value</label>
                                             <input type="text" class="form-control" id="inputDateHistogramIntervalCustom" placeholder="Enter interval value e.g. 3M, 2y, 5m"
                                                 data-bind="value: dateHistogramCustomInterval">
+                                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().dateHistogramCustomInterval"></span>
+                                            <span class="sr-only" data-bind="if: validation().dateHistogramCustomInterval">(error)</span>
+
                                             <i data-bind="bootstrapPopover" class="glyphicon glyphicon-info-sign" data-toggle="popover" data-trigger="hover" title="Custom Interval Value"
                                                 data-content="Value that defines a custom interval.  Examples: 1w - every 1 week, 4M - every 4 months, 22y - every 22 years, 30m - every 30 minutes"></i>
 
@@ -307,6 +316,7 @@
                                         </div>
 
                                         <button class="btn btn-default" data-bind="click: addRange">Add Range</button>
+                                        <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().ranges"></span>
                                     </div>
 
                                     <div class="form-group" data-bind="visible: type() == 'Date Range'">
@@ -361,6 +371,7 @@
                                         </div>
 
                                         <button class="btn btn-default" data-bind="click: addDateRange">Add Range</button>
+                                        <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().ranges"></span>
                                     </div>
 
                                     <div class="clearfix">
@@ -380,8 +391,9 @@
                             </div>
 
                             <button class="btn btn-default" data-bind="click: addBucket">Add Bucket
-                        <span class="glyphicon glyphicon-th-large" aria-hidden="true"></span>
-                      </button>
+                                <span class="glyphicon glyphicon-th-large" aria-hidden="true"></span>
+                           </button>
+                           <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().buckets"></span>
                         </div>
                     </div>
 
@@ -449,6 +461,7 @@
     <script src="bootstrap.js" type="text/javascript"></script>
     <script src="bootstrap3-typeahead.js" type="text/javascript"></script>
     <script src="bootstrap-datepicker.js" type="text/javascript"></script>
+    <script src="toastr.js" type="text/javascript"></script>
     <script src="knockout.js" type="text/javascript"></script>
     <script src="lodash.js" type="text/javascript"></script>
     <script src="moment.js" type="text/javascript"></script>

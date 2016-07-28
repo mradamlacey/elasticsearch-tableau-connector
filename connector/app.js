@@ -101,9 +101,23 @@ var app = (function () {
 
         self.submit = function(){
 
+            var messages = [];
+
             if(self.resultMode() == "aggregation"){
                 var aggData = aggregations.getAggregationData();
                 tableauData.updateProperties({elasticsearchAggregationData: aggData});
+
+                var aggValidation = self.aggregations.validate();
+                messages = aggValidation.messages;
+            }
+
+            self.validate();
+
+            if((self.validation() && self.validation().messages.length > 0) ||
+                messages.length > 0){
+
+                messages = messages.concat(self.validation().messages);
+                return toastr.error(messages.join("<br />"));
             }
 
             // We have all the configuration filled for what data we want to retrieve from Elasticsearch
@@ -132,9 +146,7 @@ var app = (function () {
 
             self.errorMessage(errorMessage);
 
-            $('html, body').animate({
-                scrollTop: $("#divError").offset().top
-            }, 500);
+            toastr.error(errorMessage);
 
             console.error(errorMessage);
             if (kill) {
@@ -334,6 +346,16 @@ var app = (function () {
                 validation.elasticsearchType = false;
             }
 
+            if(self.useCustomQuery()){
+                if(!self.searchCustomQuery()){
+                    validation.messages.push("Custom query is required");
+                    validation.searchCustomQuery = true;
+                }
+                else{
+                    validation.searchCustomQuery = false;
+                }
+            }
+
             self.validation(validation);
         };
 
@@ -386,8 +408,6 @@ var app = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////
     vm.useBasicAuthentication.subscribe(function(newValue){
 
-        vm.validate();
-
         if(newValue === false){
             vm.username("");
             vm.password("");
@@ -398,12 +418,10 @@ var app = (function () {
     });
 
     vm.username.subscribe(function(newValue){
-        vm.validate();
         tableauData.updateAuthCredentials(vm.useBasicAuthentication(), vm.useSyncClientWorkaround(), vm.username(), vm.password());
     });
 
     vm.password.subscribe(function(newValue){
-        vm.validate();
         tableauData.updateAuthCredentials(vm.useBasicAuthentication(), vm.useSyncClientWorkaround(), vm.username(), vm.password());
     });
 
@@ -412,41 +430,40 @@ var app = (function () {
     });
 
     vm.elasticsearchUrl.subscribe(function(newValue){
+
+        vm.elasticsearchIndex("");
+        vm.elasticsearchType("");
+
         vm.aggregations.clear();
-        vm.validate();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.elasticsearchIndex.subscribe(function(newValue){
+        
+        vm.elasticsearchType("");
+
         vm.aggregations.clear();
-        vm.validate();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.elasticsearchType.subscribe(function(newValue){
         vm.aggregations.clear();
-        vm.validate();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.searchCustomQuery.subscribe(function(newValue){
-        vm.validate();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.batchSize.subscribe(function(newValue){
-        vm.validate();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.limit.subscribe(function(newValue){
-        vm.validate();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.resultMode.subscribe(function(newValue){
-        vm.validate();
-
         console.log("[App] resultMode changed: " + newValue);
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
@@ -460,6 +477,9 @@ var app = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     ko.applyBindings(vm);
+
+    toastr.options.positionClass = "toast-top-center";
+    toastr.options.preventDuplicates = true;
     
     return vm;
 

@@ -74,8 +74,10 @@ var aggregations = (function () {
 
                 var metric = new Metric();
                 self.metrics.push(metric);
+
+                self.validate();
             });
-            
+                        
         };
 
         self.removeMetric = function(){
@@ -96,6 +98,8 @@ var aggregations = (function () {
             }
 
             self.buckets.push(new Bucket());
+
+            self.validate();
         };
 
         self.removeBucket = function(){
@@ -204,8 +208,61 @@ var aggregations = (function () {
 
         };
 
-        // Add default count metric
-        // self.addBucket("Count", null);
+        self.validation = ko.observable({ messages: [] });
+
+        self.validate = function(){ 
+
+            var validation = {
+                messages: []
+            };
+        
+
+            if (self.useCustomQuery()) {
+                if (!self.customQuery()) {
+                    validation.messages.push("Custom query is required");
+                    validation.customQuery = true;
+                }
+                else {
+                    validation.customQuery = false;
+                }
+            }
+            else {
+                if (self.metrics().length == 0) {
+                    validation.messages.push("Must add at least one metric");
+                    validation.metrics = true;
+                }
+                else {
+                    validation.metrics = false;
+                }
+
+                if (self.buckets().length == 0) {
+                    validation.messages.push("Must add at least one bucket");
+                    validation.buckets = true;
+                }
+                else {
+                    validation.buckets = false;
+
+                    _.each(self.buckets(), function(bucket){
+                        validation.messages = validation.messages.concat(bucket.validate().messages);
+                    });
+                }
+
+                if(self.useAggFilter()){
+                    if (!self.aggregationFilter()) {
+                        validation.messages.push("Aggregation filter is required");
+                        validation.aggregationFilter = true;
+                    }
+                    else {
+                        validation.aggregationFilter = false;
+                    }
+                }
+            }
+
+            self.validation(validation);
+
+            return validation;
+        };
+
     };
 
     var Metric = function(type, field){
@@ -237,6 +294,81 @@ var aggregations = (function () {
         self.dateRangeTypes = ko.observableArray(["Relative", "Absolute", "Custom"]);
         self.relativeOptions = ko.observableArray([ "Minute(s) ago", "Hour(s) ago", "Day(s) ago", "Week(s) ago", "Month(s) ago", "Quarter(s) ago", "Year(s) ago"]);
 
+        self.validation = ko.observable({ messages: []});
+
+        self.validate = function(){
+            var validation = {
+                messages: []
+            };
+
+            if(self.type() == "Date Histogram"){
+
+                var customIntervalRegex = /\d+[MmdYsw]/g;
+
+                if(self.dateHistogramType() == "Custom"){
+                    if(!customIntervalRegex.test(self.dateHistogramCustomInterval())){
+                        validation.messages.push("Invalid custom interval");
+                        validation.dateHistogramCustomInterval = true;
+                    }
+                }
+            }
+
+            if(self.type() == "Date Range"){
+
+                if(self.ranges().length < 2){
+                    validation.ranges = true;
+                    validation.messages.push("Must include at least 2 ranges");
+                }
+                else{
+                    _.each(self.ranges(), function(range){
+                        validation.messages = validation.messages.concat(range.validate().messages);
+                    });
+                }
+            }
+            if(self.type() == "Range"){
+                if(self.ranges().length < 2){
+                    validation.ranges = true;
+                    validation.messages.push("Must include at least 2 ranges");
+                }
+                else{
+                    _.each(self.ranges(), function(range){
+                        validation.messages = validation.messages.concat(range.validate().messages);
+                    });
+
+                    for(var i = 0; i < self.ranges().length - 1; i++){
+                        var currRange = self.ranges()[i],
+                            nextRange = self.ranges()[i + 1],
+                            currTo = parseFloat(currRange.to()),
+                            nextFrom = parseFloat(nextRange.from());
+
+                        if(currTo > nextFrom){
+                            validation.messages.push("Range #" + (i+1) + " 'To' is greater than the next range's 'From'");
+                            validation.ranges = true;
+                        }
+                    }
+
+                    for(var i = 0; i < self.ranges().length; i++){
+                        if(i != 0){
+                            if(!self.ranges()[i].from()){
+                                validation.messages.push("Range #" + (i+1) + " 'From' is required");
+                                validation.ranges = true;
+                            }
+                        }
+                        if(i != self.ranges().length - 1){
+                            if(!self.ranges()[i].to()){
+                                validation.messages.push("Range #" + (i+1) + " 'To' is required");
+                                validation.ranges = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            self.validation(validation);
+
+            return validation;
+        };
+
         self.addRange = function(){
             var range;
 
@@ -252,6 +384,8 @@ var aggregations = (function () {
                range = new Range(); 
             }
             self.ranges.push(range);
+
+            self.validate();
         };
 
         self.removeRange = function(){
@@ -397,6 +531,40 @@ var aggregations = (function () {
 
         self.fromType = ko.observable(fromType ? fromType : 'Relative');
         self.toType = ko.observable(toType ? toType : 'Relative');
+
+        self.validation = ko.observable({ messages: []});
+
+        self.validate = function(){
+            var validation = {
+                messages: []
+            };
+
+            if(self.from()){
+                var from = parseFloat(self.from());
+                if(isNaN(from)){
+                    validation.from = true;
+                    validation.messages.push("'From' is not a valid number");
+                }
+
+                if (self.to()) {
+                    var to = parseFloat(self.to());
+                    if (isNaN(to)) {
+                        validation.to = true;
+                        validation.messages.push("'To' is not a valid number");
+                    }
+                    else{
+                        if(to <= from){
+                            validation.to = true;
+                            validation.messages.push("'To' should be greater than 'From'");                          
+                        }
+                    }
+                }
+            }
+
+            self.validation(validation);
+
+            return validation;
+        };
 
         self.from.subscribe(function(newValue){
 

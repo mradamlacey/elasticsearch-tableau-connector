@@ -30,7 +30,8 @@ var koCustomBindings = (function () {
                 source: source,
                 autoSelect: true,
                 showHintOnFocus: true,
-                items: 'all'
+                items: 'all',
+                fitToElement: true
             });
 
         }
@@ -75,20 +76,20 @@ var koCustomBindings = (function () {
     };    
 
     ko.bindingHandlers.bootstrapChecked = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var value = valueAccessor();
-        var newValueAccessor = function () {
-            return {
-                change: function () {
-                    value(element.value);
+        init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+            var value = valueAccessor();
+            var newValueAccessor = function () {
+                return {
+                    change: function () {
+                        value(element.value);
+                    }
                 }
+            };
+            if ($(element).val() == ko.unwrap(valueAccessor())) {
+                $(element).closest('.btn').button('toggle');
             }
-        };
-        if ($(element).val() == ko.unwrap(valueAccessor())) {
-            $(element).closest('.btn').button('toggle');
+            ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
         }
-        ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
-    }
 }
     
     return {

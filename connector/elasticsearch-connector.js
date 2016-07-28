@@ -65,7 +65,6 @@ var elasticsearchConnector = (function () {
                     beforeSendAddAuthHeader(xhr, connectionData);
                 },
                 success: function (data) {
-                    clearError();
 
                     var connectionData = this;
                     console.log('[getElasticsearchTypeMapping] ', connectionData);
@@ -100,24 +99,13 @@ var elasticsearchConnector = (function () {
 
     function abort(errorMessage, kill) {
 
-        $('#divMessage').css('display', 'none');
-
-        $('#divError').css('display', 'block');
-        $('#errorText').text(errorMessage);
-
-        $('html, body').animate({
-            scrollTop: $("#divError").offset().top
-        }, 500);
+        toastr.error(errorMessage);
 
         console.error(errorMessage);
         if (kill) {
             tableau.abortWithError(errorMessage);
         }
 
-    }
-
-    function clearError() {
-        $('#divError').css('display', 'none');
     }
 
     //
@@ -162,6 +150,9 @@ var elasticsearchConnector = (function () {
             if (!lastRecordToken) {
                 console.log('[getTableData] open search scroll window...');
                 openSearchScrollWindow(function (err, scrollId) {
+                    if(err){
+                        abort(err, true);
+                    }
                     console.log('[getTableData] opened scroll window, scroll id: ' + scrollId);
                 });
             }
@@ -169,6 +160,9 @@ var elasticsearchConnector = (function () {
                 console.log('[getTableData] getting next scroll result...');
 
                 getNextScrollResult(lastRecordToken, function (err, results) {
+                    if(err){
+                        abort(err, true);
+                    }
                     console.log('[getTableData] processed next scroll result, count: ' + results.length);
                 })
             }
@@ -177,8 +171,13 @@ var elasticsearchConnector = (function () {
 
             console.log('[getTableData] getting aggregation response');
 
-            getAggregationResponse(function(data){
+            getAggregationResponse(function(err, data){
                 console.log("[getTableData] Finished retrieving aggregation response");
+
+                if(err){
+
+                }
+                
             });
         }
 
@@ -282,10 +281,10 @@ var elasticsearchConnector = (function () {
                     if (data[indexName] == null) {
                         errMsg = "No mapping found for type: " + connectionData.elasticsearchType + " in index: " + indexName;
                     }
-                    if (data[indexName].mappings == null) {
+                    if (data[indexName] && data[indexName].mappings == null) {
                         errMsg = "No mapping found for index: " + indexName;
                     }
-                    if (data[indexName].mappings[connectionData.elasticsearchType] == null) {
+                    if (data[indexName] && data[indexName].mappings[connectionData.elasticsearchType] == null) {
                         errMsg = "No mapping properties found for type: " + connectionData.elasticsearchType + " in index: " + indexName;
                     }
 
@@ -603,8 +602,6 @@ var elasticsearchConnector = (function () {
             },
             success: function (data) {
 
-                clearError();
-
                 var result = processSearchResults(data);
 
                 cb(null, result.scrollId);
@@ -644,8 +641,6 @@ var elasticsearchConnector = (function () {
                 beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
-                clearError();
-
                 var result = processSearchResults(data);
 
                 if (cb) {
@@ -795,8 +790,6 @@ var elasticsearchConnector = (function () {
             },
             success: function (data) {
 
-                clearError();
-
                 var result = processAggregationData(data);
 
                 tableau.dataCallback(result, null, false);
@@ -811,12 +804,12 @@ var elasticsearchConnector = (function () {
                 if (xhr.status == 0) {
                     error = 'Error creating Elasticsearch scroll window, unable to connect to host or CORS request was denied';
                     if(cb) cb(error);
-                    abort(error);
+                    abort(error, true);
                 }
                 else {
                     error = "Error creating Elasticsearch scroll window, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err
                     if(cb) cb(error);
-                    abort(error);
+                    abort(error, true);
                 }
             }
         });
