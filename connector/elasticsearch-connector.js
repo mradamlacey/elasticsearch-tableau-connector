@@ -862,8 +862,8 @@ var elasticsearchConnector = (function () {
 
                     // Set the count field associated with this bucket (at the deepest level)
                     // TODO: Only set this when we are on a bucket agg at the deepest level
-                    currentRow["metric_count_" + key] = bucket.doc_count;
-                    console.log("metric_count_" + key + " = " + bucket.doc_count);
+                    currentRow["metric_count"] = bucket.doc_count;
+                    console.log("metric_count" + " = " + bucket.doc_count);
 
                     visitAggregationResponseLevels(bucket, rows, currentRow);
                 });
@@ -949,9 +949,9 @@ var elasticsearchConnector = (function () {
                 }
                 else{
                     // If we are at the deepest level and we are collecting metrics - add a count
-                    if (hasSupportedBucketAggregation(aggInfo) && mode == "metrics") {
+                     if (mode == "metrics") {
                         fields.push({
-                            name: "metric_count_" + key,
+                            name: "metric_count",
                             type: "integer"
                         });
                     }
