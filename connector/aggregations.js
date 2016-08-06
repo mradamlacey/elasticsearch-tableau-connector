@@ -329,12 +329,12 @@ var aggregations = (function () {
 
             if(self.type() == "Date Range"){
 
-                if(self.ranges().length < 2){
+                if(self.dateRanges().length < 2){
                     validation.ranges = true;
                     validation.messages.push("Must include at least 2 ranges");
                 }
                 else{
-                    _.each(self.ranges(), function(range){
+                    _.each(self.dateRanges(), function(range){
                         validation.messages = validation.messages.concat(range.validate().messages);
                     });
                 }
