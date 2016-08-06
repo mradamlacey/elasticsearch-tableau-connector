@@ -155,6 +155,32 @@ var aggregations = (function () {
                 return metric.field();
             });
 
+            var addChildFields = function (name, objType) {
+                var objProperties = objType.properties ? objType.properties : null,
+                    propertyPrefix = name + ".";
+
+                if (!objProperties) {
+                    return;
+                }
+
+                _.forIn(objProperties, function (val, key) {
+
+                    self.fields.push({ name: propertyPrefix + key, type: val.type });
+
+                    // If this isnt a numeric field then we are done
+                    if (val.type != "long" && val.type != "double" && val.type != "int") {
+  
+                    }
+                    else{
+                       // Add to list of numeric only fields for metric field options
+                       self.metricFields.push({ name: propertyPrefix + key, type: val.type });
+                    }                    
+
+                    addChildFields(propertyPrefix + key, val);
+                });
+
+            };
+
             elasticsearchConnector.getElasticsearchTypeMapping(self.tableauData,
                 function (err, data, connectionData) {
 
@@ -204,16 +230,25 @@ var aggregations = (function () {
                     self.metricFields.removeAll();
 
                     _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
-                        // TODO: Need to support nested objects and arrays in some way
+                        
+                        if (val.properties && val.type != 'nested') {
+                            addChildFields(key, val);
+                        }
+                        else if (val.properties && val.type == 'nested') {
+                            console.log("[Aggregations] - getUpdatedTypeFields - Nested field \'" + key + "\' unsupported - ignored");
+                        }
+                        else {
+                            self.fields.push({ name: key, type: val.type });
 
-                        self.fields.push({name: key, type: val.type});
+                            // IF this isnt a numeric field then we are done
+                            if (val.type != "long" && val.type != "double" && val.type != "int") {
+                                return;
+                            }
 
-                        // Only add numeric fields
-                        if(val.type != "long" && val.type != "double" && val.type != "int"){
-                            return;
+                            // Add to list of numeric only fields for metric field options
+                            self.metricFields.push({ name: key, type: val.type });
                         }
 
-                        self.metricFields.push({name: key, type: val.type});
                     });
 
                     _.each(currentMetricFieldSelections, function(currentSelection, index){

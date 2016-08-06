@@ -536,53 +536,6 @@ var elasticsearchConnector = (function () {
 
         return aggsQuery;
     };
-/*
-    var getElasticsearchTypes = function (indexName, cb) {
-
-        var connectionData = getTableauConnectionData();
-
-        if (!connectionData.elasticsearchUrl || !connectionData.elasticsearchIndex) {
-            return;
-        }
-
-        var connectionUrl = connectionData.elasticsearchUrl + '/' + indexName + '/_mapping';
-
-        var xhr = $.ajax({
-            url: connectionUrl,
-            method: 'GET',
-            contentType: 'application/json',
-            dataType: 'json',
-            beforeSend: function (xhr) {
-                beforeSendAddAuthHeader(xhr, connectionData);
-            },
-            success: function (data) {
-
-                clearError();
-
-                var indices = _.keys(data);
-                var typeMap = {};
-
-                var esTypes = [];
-
-                _.each(indices, function (index) {
-                    var types = _.keys(data[index].mappings);
-
-                    esTypes = esTypes.concat(types);
-                });
-
-                cb(null, esTypes);
-            },
-            error: function (xhr, ajaxOptions, err) {
-                if (xhr.status == 0) {
-                    cb('Unable to get Elasticsearch types, unable to connect to host or CORS request was denied');
-                }
-                else {
-                    cb("Unable to get Elasticsearch types, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
-                }
-            }
-        });
-    }
-    */
 
     var openSearchScrollWindow = function (cb) {
 
