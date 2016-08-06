@@ -254,3 +254,132 @@ box-shadow: -1px 3px 5px 2px rgba(0,0,0,0.18);
     margin-top: 25px;
     margin-bottom: 40px;
 }
+
+.preview-results{
+   position: relative;
+   margin-top: 10px;
+}
+
+.preview-loading{
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, .75);
+    height: 400px;
+    width: 100%;
+}
+
+.preview-text{
+    font-size: larger;
+    position: absolute;
+    top: 50%;
+    left: 20%;
+}
+
+/* Progress Bar */
+.progress {
+  position: absolute;
+  top: 58%;
+  left: 20%;
+  width: 60%;
+
+  height: 4px;
+  display: block;
+
+  background-color: rgba(102, 175, 233, .5);
+  border-radius: 2px;
+  background-clip: padding-box;
+  margin: 0.5rem 0 1rem 0;
+  overflow: hidden; }
+  .progress .determinate {
+    position: absolute;
+    background-color: inherit;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(102, 175, 233, .9);
+    transition: width .3s linear; }
+  .progress .indeterminate {
+    background-color: rgba(102, 175, 233, .9); }
+    .progress .indeterminate:before {
+      content: '';
+      position: absolute;
+      background-color: inherit;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      will-change: left, right;
+      -webkit-animation: indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+              animation: indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite; }
+    .progress .indeterminate:after {
+      content: '';
+      position: absolute;
+      background-color: inherit;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      will-change: left, right;
+      -webkit-animation: indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+              animation: indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+      -webkit-animation-delay: 1.15s;
+              animation-delay: 1.15s; }
+
+@-webkit-keyframes indeterminate {
+  0% {
+    left: -35%;
+    right: 100%; }
+  60% {
+    left: 100%;
+    right: -90%; }
+  100% {
+    left: 100%;
+    right: -90%; } }
+@keyframes indeterminate {
+  0% {
+    left: -35%;
+    right: 100%; }
+  60% {
+    left: 100%;
+    right: -90%; }
+  100% {
+    left: 100%;
+    right: -90%; } }
+@-webkit-keyframes indeterminate-short {
+  0% {
+    left: -200%;
+    right: 100%; }
+  60% {
+    left: 107%;
+    right: -8%; }
+  100% {
+    left: 107%;
+    right: -8%; } }
+@keyframes indeterminate-short {
+  0% {
+    left: -200%;
+    right: 100%; }
+  60% {
+    left: 107%;
+    right: -8%; }
+  100% {
+    left: 107%;
+    right: -8%; } }
+
+.table-container{
+    padding: 10px;
+
+        position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+
+    -webkit-box-shadow: -1px 3px 5px 2px rgba(0,0,0,0.18);
+-moz-box-shadow: -1px 3px 5px 2px rgba(0,0,0,0.18);
+box-shadow: -1px 3px 5px 2px rgba(0,0,0,0.18); 
+
+    border: 1px solid #dddddd;
+
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;   
+    border-radius: 3px;
+}
