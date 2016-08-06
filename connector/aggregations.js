@@ -390,8 +390,10 @@ var aggregations = (function () {
             // with the 'to' portion of the last range
             if(self.ranges().length > 0){
                 var lastRange = self.ranges()[self.ranges().length - 1];
+
                 range = new Range(lastRange.to(), null, 
                                   lastRange.relativeNumTo(), null,
+                                  lastRange.toRelative(), null,
                                   lastRange.toType(), null);
             }
             else{
@@ -415,6 +417,7 @@ var aggregations = (function () {
                 var lastRange = self.dateRanges()[self.dateRanges().length - 1];
                 range = new Range(lastRange.to(), null, 
                                   lastRange.relativeNumTo(), null,
+                                  lastRange.toRelative(), null,
                                   lastRange.toType(), null);
             }
             else{
@@ -533,15 +536,15 @@ var aggregations = (function () {
 
     };
 
-    var Range = function(from, to, relativeNumFrom, relativeNumTo, fromType, toType){
+    var Range = function(from, to, relativeNumFrom, relativeNumTo, fromRelative, toRelative, fromType, toType){
         var self = this;
 
         self.from = ko.observable(from);
         self.relativeNumFrom = ko.observable(relativeNumFrom ? relativeNumFrom : 1);
-        self.fromRelative = ko.observable();
+        self.fromRelative = ko.observable(fromRelative ? fromRelative : null);
         self.to = ko.observable(to);
         self.relativeNumTo = ko.observable(relativeNumTo ? relativeNumTo : 1);
-        self.toRelative = ko.observable();
+        self.toRelative = ko.observable(toRelative ? toRelative : null);
 
         self.fromType = ko.observable(fromType ? fromType : 'Relative');
         self.toType = ko.observable(toType ? toType : 'Relative');
