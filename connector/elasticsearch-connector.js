@@ -265,6 +265,21 @@ var elasticsearchConnector = (function () {
                         return abort(err);
                     }
 
+                    var addChildFields = function (name, objType) {
+                        var objProperties = objType.properties ? objType.properties : null,
+                            propertyPrefix = val + ".";
+
+                        if (!objProperties) {
+                            return;
+                        }
+
+                        _.forIn(objProperies, function (val, key) {
+                            addElasticsearchField(propertyPrefix + key, val.type, val.format, val.lat_lon);
+                            addChildFields(key, val);
+                        });
+
+                    };
+
                     var indexName = connectionData.elasticsearchIndex;
 
                     // Then we selected an alias... choose the last index with a matching type name
@@ -298,7 +313,16 @@ var elasticsearchConnector = (function () {
 
                     _.forIn(data[indexName].mappings[connectionData.elasticsearchType].properties, function (val, key) {
                         // TODO: Need to support nested objects and arrays in some way
-                        addElasticsearchField(key, val.type, val.format, val.lat_lon)
+                        if(val.properties && val.type != 'nested'){
+                            addChildFields(key, val);
+                        }
+                        else if(val.properties && val.type == 'nested'){
+                            console.log("[getElasticsearchConnectionFieldInfo] - Nested field \'" + key + "\' unsupported - ignored");
+                        }
+                        else{
+                            addElasticsearchField(key, val.type, val.format, val.lat_lon);
+                        }
+                        
                     });
 
                     console.log('[getElasticsearchConnectionFieldInfo] Number of header columns: ' + elasticsearchFields.length);

@@ -108,6 +108,12 @@ var aggregations = (function () {
 
         self.metrics = ko.observableArray([]);
         self.metricFields = ko.observableArray([]);
+        self.getMetricFieldValue = function(selectedItem){
+
+            // Seleced value is the same as the name, use this as optionsValue binding so KO will preserve selected
+            // option if the options array changes
+            return selectedItem.name;
+        };
         self.getMetrics = function(){
             return self.metrics();
         };
@@ -134,6 +140,10 @@ var aggregations = (function () {
 
             console.log("[Aggregations] Getting updated type mapping information");
             self.fields.removeAll();
+
+            var currentMetricFieldSelections = _.map(self.metrics(), function(metric){
+                return metric.field();
+            });
 
             elasticsearchConnector.getElasticsearchTypeMapping(self.tableauData,
                 function (err, data, connectionData) {
@@ -194,6 +204,10 @@ var aggregations = (function () {
                         }
 
                         self.metricFields.push({name: key, type: val.type});
+                    });
+
+                    _.each(currentMetricFieldSelections, function(currentSelection, index){
+                        self.metrics()[index].field(currentSelection);
                     });
 
                     if(!cb){
