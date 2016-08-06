@@ -11,10 +11,28 @@ var koCustomBindings = (function () {
 
     ko.bindingHandlers.bootstrapPopover = {
      init: function(element, valueAccessor, allBindings, viewModel, bindingContext) {
-            $(element).popover({            
-                container: "body",
-                trigger: "hover"
-            });
+
+            var bootstrapPopoverType = allBindings.get('bootstrapPopoverType') ? allBindings.get('bootstrapPopoverType') : 'default',
+                bootstrapPopoverContent = allBindings.get('bootstrapPopoverContent') ? allBindings.get('bootstrapPopoverContent') : '';
+
+            if (bootstrapPopoverType == 'default') {
+                $(element).popover({
+                    container: "body",
+                    trigger: "hover"
+                });
+            }
+            else {
+                $(element).popover({
+                    container: "body",
+                    trigger: "hover",
+                    html: true,
+                    delay: { hide: 1200 },
+                    placement: "left",
+                    content: bootstrapPopoverContent
+                });
+            }
+
+
         }   
     };
 

@@ -297,11 +297,11 @@
 
                                             <form class="form-inline">
 
-                                                <div class="form-group">
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().from, 'has-feedback': validation().from }">
                                                     <label>From</label>
                                                     <input type="text" class="form-control" data-bind="value: from">
                                                 </div>
-                                                <div class="form-group">
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().to, 'has-feedback': validation().to }">
                                                     <label>To</label>
                                                     <input type="text" class="form-control" data-bind="value: to">
                                                 </div>
@@ -325,11 +325,11 @@
                                         <div data-bind="foreach: { data: dateRanges }">
 
                                             <form class="form-inline range-row" data-bind="css: { alternaterow: $index() % 2 }">
-                                                <div class="form-group">
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().from, 'has-feedback': validation().from }">
 
                                                     <label>From</label>
                                                     <div class="form-group">
-                                                        <select class="form-control" data-bind="options: $parent.dateRangeTypes, value: fromType"></select>
+                                                        <select class="form-control range-type-select" data-bind="options: $parent.dateRangeTypes, value: fromType"></select>
                                                     </div>
 
                                                     <div class="input-group date" data-bind="bootstrapDatePicker, visible: fromType() == 'Absolute'">
@@ -340,14 +340,15 @@
                                                     <input type="number" class="form-control date-range-number" data-bind="value: relativeNumFrom, visible: fromType() == 'Relative'">
                                                     <select class="form-control" data-bind="options: $parent.relativeOptions, value: fromRelative, visible: fromType() == 'Relative'"></select>
 
-                                                    <input type="text" class="form-control" data-bind="value: from, visible: fromType() == 'Custom'" placeholder="Enter custom date e.g. 'now-3M/M'">
+                                                    <input type="text" class="form-control range-number-input" data-bind="value: from, visible: fromType() == 'Custom'" placeholder="Enter custom date e.g. 'now-3M/M'">
+                                                    <i data-bind="visible: fromType() == 'Custom', bootstrapPopover, bootstrapPopoverType: 'rich', bootstrapPopoverContent: helperText" class="glyphicon glyphicon-info-sign" title="Custom"></i>
 
                                                 </div>
-                                                <div class="form-group">
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().to, 'has-feedback': validation().to }">
 
                                                     <label>To</label>
                                                     <div class="form-group">
-                                                        <select class="form-control" data-bind="options: $parent.dateRangeTypes, value: toType"></select>
+                                                        <select class="form-control range-type-select" data-bind="options: $parent.dateRangeTypes, value: toType"></select>
                                                     </div>
 
                                                     <div class="input-group date" data-bind="bootstrapDatePicker, visible: toType() == 'Absolute'">
@@ -358,7 +359,9 @@
                                                     <input type="number" class="form-control date-range-number" data-bind="value: relativeNumTo, visible: toType() == 'Relative'">
                                                     <select class="form-control" data-bind="options: $parent.relativeOptions, value: toRelative, visible: toType() == 'Relative'"></select>
 
-                                                    <input type="text" class="form-control" data-bind="value: to, visible: toType() == 'Custom'">
+                                                    <input type="text" class="form-control range-number-input" data-bind="value: to, visible: toType() == 'Custom'">
+                                                    <i data-bind="visible: fromType() == 'Custom', bootstrapPopover, bootstrapPopoverType: 'rich', bootstrapPopoverContent: helperText" class="glyphicon glyphicon-info-sign" title="Custom"></i>
+
 
                                                 </div>
                                                 <div class="form-group">

@@ -1,5 +1,15 @@
 var aggregations = (function () {
 
+    var relativeOptionsMap = {
+        "Minute(s) ago": "m/m",
+        "Hour(s) ago": "h/h",
+        "Day(s) ago": "d/d",
+        "Week(s) ago": "w/w",
+        "Month(s) ago": "M/M",
+        "Quarter(s) ago": "q/q",
+        "Year(s) ago": "y/y"
+    };
+
     var AggregationsViewModel = function() {
 
         var self = this;
@@ -305,7 +315,7 @@ var aggregations = (function () {
         self.dateHistogramCustomInterval = ko.observable();
         self.ranges = ko.observableArray([]);
         self.dateRanges = ko.observableArray([]);
-        self.dateRangeTypes = ko.observableArray(["Relative", "Absolute", "Custom"]);
+        self.dateRangeTypes = ko.observableArray(["Relative", "Absolute", "Custom", "Now"]);
         self.relativeOptions = ko.observableArray([ "Minute(s) ago", "Hour(s) ago", "Day(s) ago", "Week(s) ago", "Month(s) ago", "Quarter(s) ago", "Year(s) ago"]);
 
         self.validation = ko.observable({ messages: []});
@@ -391,13 +401,14 @@ var aggregations = (function () {
             if(self.ranges().length > 0){
                 var lastRange = self.ranges()[self.ranges().length - 1];
 
-                range = new Range(lastRange.to(), null, 
+                range = new Range("numeric",
+                                  lastRange.to(), null, 
                                   lastRange.relativeNumTo(), null,
                                   lastRange.toRelative(), null,
                                   lastRange.toType(), null);
             }
             else{
-               range = new Range(); 
+               range = new Range("numeric"); 
             }
             self.ranges.push(range);
 
@@ -415,13 +426,14 @@ var aggregations = (function () {
             // with the 'to' portion of the last range
             if(self.dateRanges().length > 0){
                 var lastRange = self.dateRanges()[self.dateRanges().length - 1];
-                range = new Range(lastRange.to(), null, 
+                range = new Range("date",
+                                  lastRange.to(), null, 
                                   lastRange.relativeNumTo(), null,
                                   lastRange.toRelative(), null,
                                   lastRange.toType(), null);
             }
             else{
-               range = new Range(); 
+               range = new Range("date"); 
             }
 
             self.dateRanges.push(range);
@@ -512,32 +524,20 @@ var aggregations = (function () {
         self.type.subscribe(function(newValue){
             self.updateFields();
         });
-        self.field.subscribe(function(newValue){
 
-        });
-        self.termSize.subscribe(function(newValue){
-
-        });
         self.dateHistogramType.subscribe(function(newValue){
             if(newValue != "Custom"){
                 self.dateHistogramCustomInterval("");
             }
 
         });
-        self.dateHistogramCustomInterval.subscribe(function(newValue){
-
-        });
-        self.ranges.subscribe(function(newValue){
-
-        });
-        self.dateRanges.subscribe(function(newValue){
-
-        });
 
     };
 
-    var Range = function(from, to, relativeNumFrom, relativeNumTo, fromRelative, toRelative, fromType, toType){
+    var Range = function(type, from, to, relativeNumFrom, relativeNumTo, fromRelative, toRelative, fromType, toType){
         var self = this;
+
+        self.type = ko.observable(type ? type : "numeric");
 
         self.from = ko.observable(from);
         self.relativeNumFrom = ko.observable(relativeNumFrom ? relativeNumFrom : 1);
@@ -551,31 +551,147 @@ var aggregations = (function () {
 
         self.validation = ko.observable({ messages: []});
 
+        self.helperText = ko.observable("Any valid Elasticsearch Date Math expression.  Refer to <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#date-math' target='_blank'>Date Math</a>");
+
+        self.getAbsoluteDateValue = function(rangePortion, now){
+
+            var relativeNum, relativeOption, val, type;
+
+            now = now.clone();
+
+            if(rangePortion == 'from'){
+                relativeNum = self.relativeNumFrom();
+                relativeOption = self.fromRelative();
+                val = self.from();
+                type = self.fromType();
+            }
+            else{
+                relativeNum = self.relativeNumTo();
+                relativeOption = self.toRelative();
+                val = self.to();
+                type = self.toType();
+            }
+
+            var relativeExpressionRegEx = /(now|[\d-\/]*\|\|)?([-+])?(\d+)?(\w)?(\/)?(\w)?/g;
+            var convertEsToMomentDuration = function(esDuration){
+
+                var esToMomentMap = {
+                    'H': 'h',
+                    'S': 'ms',
+                    'q': 'Q'
+                };
+                return esToMomentMap[esDuration] ? esToMomentMap[esDuration] : esDuration;
+            }
+
+            if (type == "Relative") {
+
+                if(!relativeNum){
+                    return now;
+                }
+            }
+            if (type == "Relative" || type == "Custom") {
+
+                if(type == "Relative"){
+                    val = "now-" + relativeNum + relativeOptionsMap[relativeOption];
+                }
+
+                if(moment(val).isValid()){
+                    return moment.utc(val);
+                }
+                else{
+                    var m = relativeExpressionRegEx.exec(val);
+                    if (m == null) {
+                        return null;
+                    }
+
+                    var workingDate;
+                    if (m[1] == 'now') {
+                        workingDate = now;
+                    }
+                    else if(m[1].indexOf('||') >= 0){
+                        workingDate = moment.utc(m[1].replace("||", ""));
+                        if(!workingDate.isValid()){
+                            return null;
+                        }
+                    }
+                    else{
+                        return null;
+                    }
+
+                    if(m[2]){
+                        var momentDuration = convertEsToMomentDuration(m[4] ? m[4] : 'd');
+                        var relativeNum = parseInt(m[3]);
+                        if(isNaN(relativeNum)){
+                            return null;
+                        }
+                        var momentFunc = m[2] == '-' ? 'subtract' : 'add'; 
+                        workingDate[momentFunc](relativeNum, momentDuration);
+
+                        // TODO - add rounding support                                               
+                    }
+
+                    return workingDate; 
+                }
+            }
+            if(type == "Absolute"){
+                return val ? moment.utc(val) : now;
+            }
+            if(type == "Now"){
+                return now;
+            }
+        }
+
         self.validate = function(){
             var validation = {
                 messages: []
             };
 
-            if(self.from()){
-                var from = parseFloat(self.from());
-                if(isNaN(from)){
-                    validation.from = true;
-                    validation.messages.push("'From' is not a valid number");
-                }
-
-                if (self.to()) {
-                    var to = parseFloat(self.to());
-                    if (isNaN(to)) {
-                        validation.to = true;
-                        validation.messages.push("'To' is not a valid number");
+            if (self.type() == 'numeric') {
+                if (self.from()) {
+                    var from = parseFloat(self.from());
+                    if (isNaN(from)) {
+                        validation.from = true;
+                        validation.messages.push("'From' is not a valid number");
                     }
-                    else{
-                        if(to <= from){
+
+                    if (self.to()) {
+                        var to = parseFloat(self.to());
+                        if (isNaN(to)) {
                             validation.to = true;
-                            validation.messages.push("'To' should be greater than 'From'");                          
+                            validation.messages.push("'To' is not a valid number");
+                        }
+                        else {
+                            if (to <= from) {
+                                validation.to = true;
+                                validation.messages.push("'To' should be greater than 'From'");
+                            }
                         }
                     }
                 }
+            }
+            if(self.type() == 'date'){
+                
+                var fromDate, toDate, now = moment.utc();
+
+                fromDate = self.getAbsoluteDateValue('from', now);
+                if (!fromDate) {
+                    validation.from = true;
+                    validation.messages.push("'From' is not valid");
+                }
+
+                toDate = self.getAbsoluteDateValue('to', now);
+                if (!toDate) {
+                    validation.to = true;
+                    validation.messages.push("'To' is not valid");
+                }
+
+                if (fromDate && toDate) {
+                    if (fromDate.isSame(toDate) || fromDate.isAfter(toDate)) {
+                        validation.from = true;
+                        validation.to = true;
+                        validation.messages.push("'From' date (" + fromDate.format('MM/DD/YYYY HH:mm') + ") must be before 'To' date (" + toDate.format('MM/DD/YYYY HH:mm') + ")");
+                    }
+                }              
             }
 
             self.validation(validation);
@@ -583,24 +699,6 @@ var aggregations = (function () {
             return validation;
         };
 
-        self.from.subscribe(function(newValue){
-
-        });
-        self.to.subscribe(function(newValue){
-
-        });
-        self.relativeNumFrom.subscribe(function(newValue){            
-
-        });
-        self.relativeNumTo.subscribe(function(newValue){            
-
-        });
-        self.fromRelative.subscribe(function(newValue){            
-
-        });
-        self.toRelative.subscribe(function(newValue){            
-
-        });
         self.fromType.subscribe(function(newValue){
             self.from("");
         });
@@ -618,14 +716,6 @@ var aggregations = (function () {
         vm.buckets.removeAll();
     });
 
-    vm.metrics.subscribe(function(newValue){
-
-    });
-
-    vm.buckets.subscribe(function(newValue){
-
-    });
-
     vm.useAggFilter.subscribe(function(newValue){
 
         if(!newValue){
@@ -634,27 +724,14 @@ var aggregations = (function () {
 
     });
 
-    vm.aggregationFilter.subscribe(function(){
-
-    });
 
     var getAggregationData = function(){
         var metrics = _.map(vm.getMetrics(), function(metric){
             return {
                 type: metric.type() ? metric.type() : null,
-                field: metric.field() && metric.field() ? metric.field().name : null
+                field: metric.field() ? metric.field() : null
             };
         });
-
-        var relativeOptionsMap = {
-            "Minute(s) ago" : "m/m", 
-            "Hour(s) ago": "h/h", 
-            "Day(s) ago": "d/d", 
-            "Week(s) ago": "w/w", 
-            "Month(s) ago": "M/M", 
-            "Quarter(s) ago": "q/q", 
-            "Year(s) ago": "y/y"
-        };
 
         var buckets = _.map(vm.getBuckets(), function(bucket){
             return {
@@ -672,7 +749,7 @@ var aggregations = (function () {
                 dateRanges: _.map(bucket.dateRanges(), function(range){
                     var from, to;
                     if(range.fromType() == "Absolute"){
-                        from = moment.utc(range.from()).format('YYYY-MM-DD[T]HH:mm:ss');
+                        from = range.from() ? moment.utc(range.from()).format('YYYY-MM-DD[T]HH:mm:ss') : 'now';
                     }
                     if(range.fromType() == "Custom"){
                         from = range.from();
@@ -685,9 +762,12 @@ var aggregations = (function () {
                             from = "now-" + range.relativeNumFrom() + relativeOptionsMap[range.fromRelative()];
                         }
                     }
+                    if(range.fromType() == "Now"){
+                        from = "now";
+                    }
 
                     if(range.toType() == "Absolute"){
-                        to = moment.utc(range.to()).format('YYYY-MM-DD[T]HH:mm:ss');
+                        to = range.to() ? moment.utc(range.to()).format('YYYY-MM-DD[T]HH:mm:ss') : 'now';
                     }
                     if(range.toType() == "Custom"){
                         to = range.to();
@@ -701,6 +781,10 @@ var aggregations = (function () {
                         }
                         
                     }
+                    if(range.toType() == "Now"){
+                        to = "now";
+                    }
+
                     return {
                         from: from,
                         to: to

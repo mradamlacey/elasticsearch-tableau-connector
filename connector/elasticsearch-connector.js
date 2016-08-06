@@ -242,7 +242,7 @@ var elasticsearchConnector = (function () {
             html: true,
             delay: { hide: 2500 },
             placement: "left",
-            content: "Use Query String syntax to define a filter to apply to the data that is aggregated.  Refer to: <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax'>Query String Syntax</a>"           
+            content: "Use Query String syntax to define a filter to apply to the data that is aggregated.  Refer to: <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax' target='_blank'>Query String Syntax</a>"           
         });
 
         $("#submitButton").click(function (e) { // This event fires when a button is clicked            
