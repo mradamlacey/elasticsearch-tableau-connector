@@ -267,15 +267,15 @@ var elasticsearchConnector = (function () {
 
                     var addChildFields = function (name, objType) {
                         var objProperties = objType.properties ? objType.properties : null,
-                            propertyPrefix = val + ".";
+                            propertyPrefix = name + ".";
 
                         if (!objProperties) {
                             return;
                         }
 
-                        _.forIn(objProperies, function (val, key) {
+                        _.forIn(objProperties, function (val, key) {
                             addElasticsearchField(propertyPrefix + key, val.type, val.format, val.lat_lon);
-                            addChildFields(key, val);
+                            addChildFields(propertyPrefix + key, val);
                         });
 
                     };
@@ -699,6 +699,47 @@ var elasticsearchConnector = (function () {
                 hitsToProcess = connectionData.limit - totalCount;
             }
 
+            var assignFieldValue = function (currentRow, name, obj) {
+                var objKeys = _.keys(obj),
+                    propertyPrefix = name + ".";
+
+                currentRow[name] = _.isNull(obj) || _.isUndefined(obj) ?
+                    null :
+                    obj;
+
+                if (_.isObject(currentRow[name])) {
+
+                    if (objKeys.length == 0) {
+                        return;
+                    }
+
+                    _.forIn(obj, function (val, key) {
+                        assignFieldValue(currentRow, propertyPrefix + key, val);
+                    });
+                }
+                else if (_.isArray(currentRow[name])) {
+                     console.warn("[ElasticsearchConnector] - unable to assign array value for field: " + name);
+                }
+
+            };
+
+            var getDeeplyNestedValue = function(obj, propertyName){
+                var props = propertyName.split('.');
+
+                var currentValue = obj[props[0]];
+                if(!currentValue){
+                    return null;
+                }
+                for(var i = 1; i < props.length; i++){
+                    currentValue = currentValue[props[i]];
+                    if(!currentValue){
+                        return null;
+                    }
+                }
+
+                return currentValue;
+            }
+
             // mash the data into an array of objects
             for (ii = 0; ii < hitsToProcess; ++ii) {
 
@@ -708,9 +749,9 @@ var elasticsearchConnector = (function () {
                 // about this noisily in its log files
                 _.each(connectionData.fields, function (field) {
 
-                    item[field.name] = _.isNull(hits[ii]._source[field.name]) || _.isUndefined(hits[ii]._source[field.name]) ?
-                        null :
-                        hits[ii]._source[field.name];
+                    var fieldValue = getDeeplyNestedValue(hits[ii]._source, field.name);
+                    item[field.name] = _.isNull(fieldValue) || _.isUndefined(fieldValue) ? null : fieldValue;
+
                 });
 
                 // Copy over any formatted value to the source object
