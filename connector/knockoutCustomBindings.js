@@ -108,8 +108,39 @@ var koCustomBindings = (function () {
             }
             ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
         }
-}
+    };
+
+    ko.bindingHandlers.stickyHeader = {
+
+        init: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
+
+            // Cache selectors for faster performance.
+            var $window = $(window),
+                $element = $(element),
+                stickyHeaderAnchorElementId = allBindings.get('stickyHeaderAnchorElementId');
+
+            $anchorElement = $('#' + stickyHeaderAnchorElementId);
+
+            // Run this on scroll events.
+            $window.scroll(function () {
+                var window_top = $window.scrollTop();
+                var div_top = $anchorElement.offset().top;
+                if (window_top > div_top) {
+                    // Make the div sticky.
+                    $element.addClass('sticky-header');
+                    $anchorElement.height($element.height());
+                }
+                else {
+                    // Unstick the div.
+                    $element.removeClass('sticky-header');
+                    $anchorElement.height(0);
+                }
+            });
+
+        }
+    };
     
+
     return {
         bootstrapDatePicker: ko.bindingHandlers.bootstrapDatePicker,
         bootstrapPopover: ko.bindingHandlers.bootstrapPopover,

@@ -99,38 +99,107 @@ var app = (function () {
             return connectionData;
         }
 
-        self.submit = function(){
+        self.isPreviewVisible = ko.observable(false);
+        self.isPreviewDataLoading = ko.observable(false);
+        self.previewFields = ko.observableArray([]);
+        self.previewData = ko.observableArray([]);
 
-            var messages = [];
+        self.previewDataRaw = [];
 
-            if(self.resultMode() == "aggregation"){
-                var aggData = aggregations.getAggregationData();
-                tableauData.updateProperties({elasticsearchAggregationData: aggData});
+        self.preview = function () {
 
-                var aggValidation = self.aggregations.validate();
-                messages = aggValidation.messages;
-            }
+            self.previewFields.removeAll();
+            self.previewData.removeAll();
+            self.previewDataRaw = [];
 
-            self.validate();
+            self.isPreviewVisible(true);
+            self.isPreviewDataLoading(true);
 
-            if((self.validation() && self.validation().messages.length > 0) ||
-                messages.length > 0){
+            setTimeout(function () {
+                $('html, body').animate({
+                    scrollTop: $("#preview-results").offset().top
+                }, 250);
+            }, 250);
 
-                messages = messages.concat(self.validation().messages);
-                return toastr.error(messages.join("<br />"));
-            }
+            self.getElasticsearchFieldData(function (err, esFieldData) {
 
-            // We have all the configuration filled for what data we want to retrieve from Elasticsearch
-            // Go retrieve the actual fields and data types in order to update the Tableau connection data
-            elasticsearchConnector.getElasticsearchConnectionFieldInfo(tableauData.getUnwrapped(), function (err, esFieldData) {
-                if (err) {
-                    console.log("[App] - error returned from getElasticsearchConnectionFieldInfo");
-                    return;
+                if(err){
+                    self.isPreviewVisible(false);
+                    self.isPreviewDataLoading(false);
+                    return toastr.error(err);
                 }
+
+                _.each(esFieldData.fields, function(field){
+                    self.previewFields.push(field.name);
+                });
 
                 tableauData.updateProperties(esFieldData);
 
-                startTime = moment();
+                if (self.resultMode() == "search") {
+                    elasticsearchConnector.openSearchScrollWindow(false, function (err, result) {
+
+                        if (err) {
+                            self.isPreviewVisible(false);
+                            self.isPreviewDataLoading(false);
+                            return toastr.error("Error getting preview data: " + err);
+                        }
+
+                        console.log("[App] - preview - opened search scroll window");
+
+                        self.previewDataRaw = self.previewDataRaw.concat(result.results);
+                        elasticsearchConnector.getNextScrollResult(false, result.scrollId, self.processNextScrollResult);
+                    });
+                }
+                
+                if(self.resultMode() == "aggregation"){
+
+                    elasticsearchConnector.getAggregationResponse(false, function(err, result){
+                        
+                        if (err) {
+                            self.isPreviewVisible(false);
+                            self.isPreviewDataLoading(false);
+                            return toastr.error("Error getting preview data: " + err);
+                        }
+
+                        console.log("[App] - preview - received aggregation response");
+                        self.previewData(result);
+
+                        self.isPreviewDataLoading(false);
+                    });
+                }
+
+            });
+
+
+        };
+
+        self.processNextScrollResult = function(err, result){
+
+            if(err){     
+                self.isPreviewVisible(false);
+                self.isPreviewDataLoading(false);        
+                return toastr.error("Error getting preview data: " + err);
+            }
+
+            if(result.results.length == 0){
+                self.isPreviewDataLoading(false); 
+                self.previewData(self.previewDataRaw);
+                return;
+            }
+
+            self.previewDataRaw = self.previewDataRaw.concat(result.results);            
+            elasticsearchConnector.getNextScrollResult(false, result.scrollId, self.processNextScrollResult);
+        };
+
+        self.submit = function(){
+
+            self.getElasticsearchFieldData(function(err, esFieldData){
+
+                if(err){
+                    return toastr.error(err);
+                }
+
+                tableauData.updateProperties(esFieldData);
 
                 if (tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
                     console.log("[App] Submitting tableau interactive phase data");
@@ -140,6 +209,7 @@ var app = (function () {
                     self.abort('Invalid phase: ' + tableau.phase + ' aborting', true);
                 }
             });
+        
         }
 
         self.abort = function(errorMessage, kill) {
@@ -295,6 +365,43 @@ var app = (function () {
             });
         };
 
+     self.getElasticsearchFieldData = function(cb){
+            var messages = [];
+
+            if(self.resultMode() == "aggregation"){
+                var aggData = aggregations.getAggregationData();
+                tableauData.updateProperties({elasticsearchAggregationData: aggData});
+
+                var aggValidation = self.aggregations.validate();
+                messages = aggValidation.messages;
+            }
+
+            self.validate();
+
+            if((self.validation() && self.validation().messages.length > 0) ||
+                messages.length > 0){
+
+                messages = messages.concat(self.validation().messages);
+
+                if(cb) cb(messages.join("<br />"));
+                return;
+            }
+
+            // We have all the configuration filled for what data we want to retrieve from Elasticsearch
+            // Go retrieve the actual fields and data types in order to update the Tableau connection data
+            elasticsearchConnector.getElasticsearchConnectionFieldInfo(tableauData.getUnwrapped(), function (err, esFieldData) {
+                if (err) {
+                    console.log("[App] - error returned from getElasticsearchConnectionFieldInfo");
+                    if(cb) cb(err);
+                    return;
+                }
+
+                if(cb){
+                    cb(null, esFieldData)
+                }
+            });
+        };
+
         self.validate = function(){
 
             var validation = {
@@ -434,6 +541,10 @@ var app = (function () {
         vm.elasticsearchIndex("");
         vm.elasticsearchType("");
 
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
+        vm.previewDataRaw = [];
+
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
@@ -442,16 +553,28 @@ var app = (function () {
         
         vm.elasticsearchType("");
 
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
+        vm.previewDataRaw = [];
+
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.elasticsearchType.subscribe(function(newValue){
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
+        vm.previewDataRaw = [];
+
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.searchCustomQuery.subscribe(function(newValue){
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
+        vm.previewDataRaw = [];
+
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
@@ -465,6 +588,12 @@ var app = (function () {
 
     vm.resultMode.subscribe(function(newValue){
         console.log("[App] resultMode changed: " + newValue);
+
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
+        vm.previewDataRaw = [];
+        vm.isPreviewVisible(false);
+        
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });

@@ -417,11 +417,76 @@
 
                 </div>
 
-                <button class="btn btn-primary" data-bind="click: submit">Submit</button>
+                <button class="btn btn-default" data-bind="click: preview">
+                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                    Preview
+                </button>
+
+                <button class="btn btn-primary" data-bind="click: submit">
+                    Submit
+                </button>
 
             </div>
 
         </div>
+
+<div class="row">
+
+ <div class="col-md-10">
+     
+        <div id="preview-results" class="container preview-results" data-bind="visible: isPreviewVisible">
+
+            
+
+               
+
+            <div class="table-container">
+ 
+                <h3>Preview Data</h3>
+                <div class="table-responsive">
+
+                    <div id="previewTableStickyHeaderAnchor"></div>
+
+                <table class="table table-hover">
+                    <thead>
+                        <tr data-bind="foreach: { data: previewFields }">
+                            <th data-bind="text: $data"></th>
+                        </tr>
+                    </thead>
+
+                    <tbody data-bind="foreach: { data: previewData }">
+                        <tr>
+                            <!--<th scope="row" data-bind="text: $index"></th> -->
+
+                            <!-- ko foreach: $parent.previewFields -->
+                            
+                            <td data-bind="text: $parent[$data]">
+                                <span data-bind="text: $parent.index"></span>
+                                <span data-bind="text: $parents[1].previewData()[$parent.index]"></span>
+                            </td>
+                            <!-- /ko -->
+                       </tr>
+                   </tbody>
+                </table>
+                </div>
+
+            </div>
+
+            </div>
+
+            <div class="preview-loading" data-bind="visible: isPreviewDataLoading">
+                
+                <span class="preview-text">Loading...</span>
+                <div class="progress">
+                    <div class="indeterminate"></div>
+                </div>
+
+            </div>
+
+            </div>
+
+        </div>
+
         <div class="row" style="display: none">
             <div class="col-md-10 col-md-offset-1">
                 <div class="alert alert-success">
