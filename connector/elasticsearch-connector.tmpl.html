@@ -430,11 +430,23 @@
 
         </div>
 
-        <div id="preview-results" class="preview-results" data-bind="visible: isPreviewVisible">
+<div class="row">
+
+ <div class="col-md-10">
+     
+        <div id="preview-results" class="container preview-results" data-bind="visible: isPreviewVisible">
+
+            
+
+               
 
             <div class="table-container">
  
                 <h3>Preview Data</h3>
+                <div class="table-responsive">
+
+                    <div id="previewTableStickyHeaderAnchor"></div>
+
                 <table class="table table-hover">
                     <thead>
                         <tr data-bind="foreach: { data: previewFields }">
@@ -456,6 +468,9 @@
                        </tr>
                    </tbody>
                 </table>
+                </div>
+
+            </div>
 
             </div>
 
@@ -465,6 +480,8 @@
                 <div class="progress">
                     <div class="indeterminate"></div>
                 </div>
+
+            </div>
 
             </div>
 

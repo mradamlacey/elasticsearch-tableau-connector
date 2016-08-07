@@ -119,28 +119,55 @@ var app = (function () {
                 $('html, body').animate({
                     scrollTop: $("#preview-results").offset().top
                 }, 250);
-            }, 500);
+            }, 250);
 
             self.getElasticsearchFieldData(function (err, esFieldData) {
+
+                if(err){
+                    self.isPreviewVisible(false);
+                    self.isPreviewDataLoading(false);
+                    return toastr.error(err);
+                }
 
                 _.each(esFieldData.fields, function(field){
                     self.previewFields.push(field.name);
                 });
 
-                elasticsearchConnector.openSearchScrollWindow(false, function (err, result) {
+                tableauData.updateProperties(esFieldData);
 
-                    if (err) {
-                        self.isPreviewVisible(false);
+                if (self.resultMode() == "search") {
+                    elasticsearchConnector.openSearchScrollWindow(false, function (err, result) {
+
+                        if (err) {
+                            self.isPreviewVisible(false);
+                            self.isPreviewDataLoading(false);
+                            return toastr.error("Error getting preview data: " + err);
+                        }
+
+                        console.log("[App] - preview - opened search scroll window");
+
+                        self.previewDataRaw = self.previewDataRaw.concat(result.results);
+                        elasticsearchConnector.getNextScrollResult(false, result.scrollId, self.processNextScrollResult);
+                    });
+                }
+                
+                if(self.resultMode() == "aggregation"){
+
+                    elasticsearchConnector.getAggregationResponse(false, function(err, result){
+                        
+                        if (err) {
+                            self.isPreviewVisible(false);
+                            self.isPreviewDataLoading(false);
+                            return toastr.error("Error getting preview data: " + err);
+                        }
+
+                        console.log("[App] - preview - received aggregation response");
+                        self.previewData(result);
+
                         self.isPreviewDataLoading(false);
-                        return toastr.error("Error getting preview data: " + err);
-                    }
+                    });
+                }
 
-                    console.log("[App] - preview - opened search scroll window");
-
-                    self.previewDataRaw = self.previewDataRaw.concat(result.results);
-                    elasticsearchConnector.getNextScrollResult(false, result.scrollId, self.processNextScrollResult);
-
-                });
             });
 
 
@@ -357,6 +384,7 @@ var app = (function () {
                 messages = messages.concat(self.validation().messages);
 
                 if(cb) cb(messages.join("<br />"));
+                return;
             }
 
             // We have all the configuration filled for what data we want to retrieve from Elasticsearch
@@ -561,9 +589,10 @@ var app = (function () {
     vm.resultMode.subscribe(function(newValue){
         console.log("[App] resultMode changed: " + newValue);
 
-        self.previewFields.removeAll();
-        self.previewData.removeAll();
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
         vm.previewDataRaw = [];
+        vm.isPreviewVisible(false);
         
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());

@@ -103,6 +103,7 @@ var elasticsearchConnector = (function () {
 
         console.error(errorMessage);
         if (kill) {
+            console.error('[ElasticsearchConnector] - calling tableau abort');
             tableau.abortWithError(errorMessage);
         }
 
@@ -122,7 +123,7 @@ var elasticsearchConnector = (function () {
             connectionData = JSON.parse(tableau.connectionData);
         }
         catch (ex) {
-            abort("Error parsing tableau connection data: \n", ex);
+            abort("Error parsing tableau connection data: \n" + ex, true);
             return;
         }
 
@@ -171,11 +172,11 @@ var elasticsearchConnector = (function () {
 
             console.log('[getTableData] getting aggregation response');
 
-            getAggregationResponse(function(err, data){
+            getAggregationResponse(true, function(err, data){
                 console.log("[getTableData] Finished retrieving aggregation response");
 
                 if(err){
-
+                    abort(err, true);
                 }
                 
             });
@@ -252,6 +253,12 @@ var elasticsearchConnector = (function () {
     };
 
     var getElasticsearchConnectionFieldInfo = function (connectionData, cb) {
+
+        elasticsearchFields = [];
+        elasticsearchFieldsMap = {};
+        elasticsearchAggsMap = {};
+        elasticsearchDateFields = [];
+        elasticsearchGeoPointFields = [];
 
         switch (connectionData.elasticsearchResultMode) {
             case "search":
@@ -363,8 +370,9 @@ var elasticsearchConnector = (function () {
 
                 var aggregations = aggsQuery.aggregations ? aggsQuery.aggregations : aggsQuery.aggs;
                 if (!aggregations) {
+                    var err = "Aggregation query must include 'aggregations' or 'aggs' property";
                     if(cb) cb(err);
-                    return abort("Aggregation query must include 'aggregations' or 'aggs' property");
+                    return abort(err);
                 }
 
                 var bucketAggs = parseAggregations(aggregations, "buckets");
@@ -541,7 +549,7 @@ var elasticsearchConnector = (function () {
 
         totalCount = 0;
         searchHitsTotal = -1;
-        
+
         var connectionData = JSON.parse(tableau.connectionData);
 
         if (!connectionData.elasticsearchUrl) {
@@ -557,6 +565,7 @@ var elasticsearchConnector = (function () {
             }
             catch (err) {
                 abort("Error parsing custom query: " + connectionData.elasticsearchQuery + "\nError:" + err);
+                if(cb) cb(err);
                 return;
             }
         }
@@ -601,6 +610,7 @@ var elasticsearchConnector = (function () {
         var connectionData = JSON.parse(tableau.connectionData);
 
         if (!connectionData.elasticsearchUrl) {
+            if(cb) cb("Elasticsearch URL is required");
             return;
         }
 
@@ -772,7 +782,7 @@ var elasticsearchConnector = (function () {
         }
     };
 
-    var getAggregationResponse = function (cb) {
+    var getAggregationResponse = function (tableauDataMode, cb) {
 
         var connectionData = JSON.parse(tableau.connectionData);
 
@@ -791,7 +801,7 @@ var elasticsearchConnector = (function () {
                 var errMsg = "Error parsing custom aggregation query: " + connectionData.elasticsearchAggregationData.customQuery + "\nError:" + err;
                 if(cb) cb(errMsg);
 
-                return abort(errMsg);
+                return abort(errMsg, tableauDataMode);
             }
         }
         else {
@@ -816,6 +826,12 @@ var elasticsearchConnector = (function () {
             success: function (data) {
 
                 var result = processAggregationData(data);
+                if(result == null){
+                    if(cb) cb("Error processing aggregation data in response, either missing or invalid");
+                    if(tableauDataMode){
+                        abort("Error processing aggregation data in response, either missing or invalid", true);
+                    }
+                }
 
                 tableau.dataCallback(result, null, false);
 
@@ -829,12 +845,12 @@ var elasticsearchConnector = (function () {
                 if (xhr.status == 0) {
                     error = 'Error creating Elasticsearch scroll window, unable to connect to host or CORS request was denied';
                     if(cb) cb(error);
-                    abort(error, true);
+                    abort(error, tableauDataMode);
                 }
                 else {
                     error = "Error creating Elasticsearch scroll window, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err
                     if(cb) cb(error);
-                    abort(error, true);
+                    abort(error, tableauDataMode);
                 }
             }
         });
@@ -844,7 +860,8 @@ var elasticsearchConnector = (function () {
 
         var aggregations = data.aggregations;
         if (!aggregations) {
-            abort("No 'aggregations' property in response", true);
+            abort("No 'aggregations' property in response");
+            return null;
         }
 
         var rows = [];
@@ -1197,7 +1214,8 @@ var elasticsearchConnector = (function () {
         getElasticsearchConnectionFieldInfo: getElasticsearchConnectionFieldInfo,
         getElasticsearchTypeMapping: getElasticsearchTypeMapping,
         openSearchScrollWindow: openSearchScrollWindow,
-        getNextScrollResult: getNextScrollResult
+        getNextScrollResult: getNextScrollResult,
+        getAggregationResponse: getAggregationResponse
     }
 
 })();
