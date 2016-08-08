@@ -172,6 +172,12 @@ into the `Web Connector URL` input field in the SDK's form.
 From there you should see this connector's UI:
 ![](https://github.com/mradamlacey/elasticsearch-tableau-connector/blob/master/resources/connector-form-example.png)
 
+Connector UI when in Aggregation mode:
+![](https://github.com/mradamlacey/elasticsearch-tableau-connector/blob/master/resources/connector-form-aggregation-example.png)
+
+Connector UI after fetching preview data:
+![](https://github.com/mradamlacey/elasticsearch-tableau-connector/blob/master/resources/connector-form-preview-example.png)
+
 ## Using the Connector UI
 
 The Elasticsearch connector UI includes the following fields:
@@ -185,14 +191,80 @@ The Elasticsearch connector UI includes the following fields:
 | Password | String | If 'Use HTTP Basic Auth' is checked, this is the password |
 | Index name | String | \[Required\] Name of the index in the Elasticsearch cluster |
 | Type | String | \[Required\] Name of the type in the Elasticsearch cluster to query |
-| Use custom query? | Boolean | If true, indicates if the extract should use a custom query against Elasticsearch, if false extract will be a 'match all' |
-| Query | String | If `Use custom query?` is true, this will be the JSON request payload sent to Elasticsearch.  `from`, and `size` will be overwritten if supplied. Refer to [Elasticsearch Query DSL](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html) for a reference on writing a query |
+| Result Mode | Option | Option to retrieve search results from Elasticsearch (Search Result Mode) or from a query using aggregation (Aggregation Mode) |
+| Use custom query? | Boolean | If true, indicates if the extract should use a custom query against Elasticsearch in search result mode, if false extract will be a 'match all' |
+| Query | String | If `Use custom query?` is true, this will be the JSON request payload sent to Elasticsearch in search result mode.  `from`, and `size` will be overwritten if supplied. Refer to [Elasticsearch Query DSL](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html) for a reference on writing a query |
 | Batch size of per request to Elasticsearch | Integer | Number of rows to retrieve at once, defaults to 10, should probably be 1000+ |
 | Total limit on numnber of rows to sync | Integer | Limit of rows to include in extract, defaults to 100, but generally should be left blank to indicate that all matching rows should be included |
+| Use custom query? (aggregation mode) | Boolean | If true, indicates the data extract should use a custom query that includes an aggregation request |
+| Custom query | String | JSON payload sent in the request for Elasticsearch, must include `aggregations` and `aggs` for Terms, Range, Date Range or Date Histogram |
+| Metrics | Metric | One or more metrics to calculate for the aggregation results.  Valid options are Count, Min, Max, Sum, Average, Stats, and Extended Stats. Refer to 'Metrics' section |
+| Buckets | Bucket | Bucket to aggregate results to and calculate metrics for, or multiple levels of child buckets.  See buckets for more information |
 
-The 'Submit' button will execute the extract and report the total number of rows and the executing time when completed.
+### Metrics
+
+Supported metrics:
+
+ - Count
+ - [Min](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-min-aggregation.html)
+ - [Max](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-max-aggregation.html)
+ - [Sum](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-sum-aggregation.html)
+ - [Average](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-avg-aggregation.html)
+ - [Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-stats-aggregation.html)
+ - [Extended Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-extendedstats-aggregation.html)
+
+### Buckets
+
+### Preview
+
+The connector supports requesting data for Elasticsearch from the UI to preview the data that will be created in the data extract in Tableau.  The preview button will send this
+request to Elasticsearch based on the current configuration and populate a table at the bottom of the view.  This feature is useful for debugging 
+to make sure any custom queries and other configuration returns a valid response.
+
+### Submit
+
+The submit button will save the configuration for the data extract with Tableau and continue the process of creating the extract.
 
 ## Handling Elasticsearch Data Types
+
+### `object`
+
+For types that include mapping with objects (fields with their set of properties), a concatenated field name will be created.  For the following mapping:
+```json
+{
+    person: {
+        properties: {
+            firstName: {
+                type: string
+            },
+            lastName: {
+                type: string
+            },
+            address: {
+                properties: {
+                    street: {
+                        type: string
+                    },
+                    city: {
+                        type: string
+                    },
+                    zip: {
+                        type: string
+                    }
+                }
+            }
+        }
+    }
+}
+``` 
+
+Will create the following fields:
+
+ - person.firstName
+ - person.lastName
+ - person.address.street
+ - person.address.city
+ - person.address.zip
 
 ### `geo_point`
 
