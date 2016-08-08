@@ -6,7 +6,6 @@ var aggregations = (function () {
         "Day(s) ago": "d/d",
         "Week(s) ago": "w/w",
         "Month(s) ago": "M/M",
-        "Quarter(s) ago": "q/q",
         "Year(s) ago": "y/y"
     };
 
@@ -351,7 +350,7 @@ var aggregations = (function () {
         self.ranges = ko.observableArray([]);
         self.dateRanges = ko.observableArray([]);
         self.dateRangeTypes = ko.observableArray(["Relative", "Absolute", "Custom", "Now"]);
-        self.relativeOptions = ko.observableArray([ "Minute(s) ago", "Hour(s) ago", "Day(s) ago", "Week(s) ago", "Month(s) ago", "Quarter(s) ago", "Year(s) ago"]);
+        self.relativeOptions = ko.observableArray([ "Minute(s) ago", "Hour(s) ago", "Day(s) ago", "Week(s) ago", "Month(s) ago", "Year(s) ago"]);
 
         self.validation = ko.observable({ messages: []});
 
