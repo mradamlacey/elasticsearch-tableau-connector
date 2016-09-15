@@ -1,0 +1,529 @@
+<html>
+<meta http-equiv="Cache-Control" content="no-store" />
+
+<head>
+    <title>Elasticsearch Tableau Web Data Connector</title>
+
+    
+    
+    <link rel="stylesheet" href="elasticsearch-connector.min.css">
+    
+
+</head>
+
+<body>
+
+
+
+    <div class="container-fluid">
+
+        <div class="row title-row">
+            <div class="col-md-10 col-md-offset-1">
+
+
+                <div class="es-logo pull-left"></div>
+                <div class="title pull-left">
+                    <h2>Tableau Web Data Connector</h2>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="divMessage" class="row" style="display: none">
+            <div class="col-md-10 col-md-offset-1">
+                <div class="alert alert-success">
+                    <p id="messageText"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row no-tableau">
+            <div class="col-md-10 col-md-offset-1">
+                <div class="alert alert-info">
+                    <p>Please open this URL from within Tableau</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row tableau">
+            <div class="col-md-10 col-md-offset-1">
+
+
+                <div class="form-group">
+                    <label for="inputConnectionName">Connection Name</label>
+                    <input class="form-control" id="inputConnectionName" placeholder="Enter unique name of Tableau Data Connection" data-bind="value: connectionName">
+                </div>
+                <div class="checkbox">
+                    <label>
+              <input id="cbUseBasicAuth" type="checkbox" data-bind="checked: useBasicAuthentication">Use HTTP Basic Authentication?
+            </label>
+                </div>
+                <div class="checkbox basic-auth-control" data-bind="visible: useBasicAuthentication">
+                    <label>
+              <input id="cbUseSyncClientWorkaround" type="checkbox" data-bind="checked: useSyncClientWorkaround">Use Online Sync Client workaround?
+              <i id="iconUseSyncClientWorkaround" class="glyphicon glyphicon-info-sign"
+                 title="Use Sync Client Workaround" 
+                 data-content="When checked, the datasource will store the username and password credentials used to authenticate to Elasticsearch as normal connection properties.  This works around an issue in refreshing web data connector sources that use authentication in the Online Sync Client.  Storing credentials as connection properties means that they are written in cleartext in log files and other places the datasource is persisted.  If you don't intend to use the Online Sync Client then keep this option unchecked."></i>
+            </label>
+                </div>
+                <div class="form-group required basic-auth-control" data-bind="visible: useBasicAuthentication, css: { 'has-error': validation().username, 'has-feedback': validation().username }">
+                    <label for="inputUsername">Username</label>
+                    <input class="form-control" id="inputUsername" placeholder="Elasticsearch username" autocomplete="off" data-bind="value: username">
+                    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().username"></span>
+                    <span class="sr-only" data-bind="if: validation().username">(error)</span>
+                </div>
+                <div class="form-group required basic-auth-control" data-bind="visible: useBasicAuthentication, css: { 'has-error': validation().password, 'has-feedback': validation().password }">
+                    <label for="inputPassword">Password</label>
+                    <input type="password" class="form-control" id="inputPassword" autocomplete="off" data-bind="value: password">
+                    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().password"></span>
+                    <span class="sr-only" data-bind="if: validation().password">(error)</span>
+                </div>
+                    <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchUrl, 'has-feedback': validation().elasticsearchUrl }">
+                    <label for="inputElasticsearchUrl">Elasticsearch URL</label>
+                    <input class="form-control" id="inputElasticsearchUrl" placeholder="Elasticsearch URL" data-bind="value: elasticsearchUrl">
+                    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().elasticsearchUrl"></span>
+                    <span class="sr-only" data-bind="if: validation().elasticsearchUrl">(error)</span>
+                </div>
+                <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchIndex, 'has-feedback': validation().elasticsearchIndex }">
+                    <label for="inputElasticsearchIndexTypeahead">Index Name</label>
+                    <input class="form-control" type="text" data-provide="typeahead" data-bind="typeahead, typeaheadSource: elasticsearchIndexSource, value: elasticsearchIndex"
+                        autocomplete="off" placeholder="Name of index like 'index1'">
+                    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().elasticsearchIndex"></span>
+                    <span class="sr-only" data-bind="if: validation().elasticsearchIndex">(error)</span>
+                    <i class="index-icon glyphicon glyphicon-refresh icon-refresh-animate hide"></i>
+                    </input>
+
+                </div>
+                <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchType, 'has-feedback': validation().elasticsearchType }">
+                    <label for="inputElasticsearchTypeTypeahead">Type</label>
+                    <input class="form-control" type="text" data-provide="typeahead" data-bind="typeahead, typeaheadSource: elasticsearchTypeSource, value: elasticsearchType"
+                        autocomplete="off" placeholder="Name of type like 'user'">
+                    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().elasticsearchType"></span>
+                    <span class="sr-only" data-bind="if: validation().elasticsearchType">(error)</span>
+                    <i class="type-icon glyphicon glyphicon-refresh icon-refresh-animate hide"></i>
+                    </input>
+
+                </div>
+                <div>
+                </div>
+
+                <div class="form-group">
+
+                    <div id="divResultMode" class="btn-group" data-toggle="buttons">
+                        <label class="btn btn-default active">
+                            <input type="radio" name="resultmode" value="search" data-bind="bootstrapChecked: resultMode">Search Result Mode</input>
+                        </label>
+                        <label class="btn btn-default">
+                            <input type="radio" name="resultmode" value="aggregation" data-bind="bootstrapChecked: resultMode">Aggregation Mode</input>
+                        </label>
+                    </div>
+
+                </div>
+
+                <div id="divSearchResultControls" data-bind="visible: resultMode() == 'search'">
+
+                    <div class="checkbox">
+                        <label>
+              <input id="cbUseQuery" type="checkbox" data-bind="checked: useCustomQuery">Use custom query?
+            </label>
+                    </div>
+                    <div id="divQuery" class="form-group required" data-bind="visible: useCustomQuery">
+                        <label for="textElasticsearchQuery">Query</label>
+
+                        <div id="divElasticsearchQueryEditor" 
+                             class="query-editor" 
+                             data-bind="aceEditor, aceEditorText: searchCustomQuery">
+                        </div>
+
+                    </div>
+                    <div class="form-group required">
+                        <label for="inputBatchSize">Batch record size for each response</label>
+                        <input type="number" class="form-control" id="inputBatchSize" placeholder="Batch size per request" min="1" data-bind="value: batchSize">
+                    </div>
+                    <div class="form-group required">
+                        <label for="inputTotalLimit">Limit on number of rows to extract</label>
+                        <input type="number" class="form-control" id="inputTotalLimit" placeholder="Total limit" min="1" data-bind="value: limit">
+                    </div>
+
+                </div>
+
+                <div data-bind="visible: resultMode() == 'aggregation'">
+
+                <div id="divAggregationResultControls" data-bind="with: aggregations">
+
+                    <div class="checkbox">
+                        <label>
+                        <input id="cbUseAggregationQuery" type="checkbox"
+                               data-bind="checked: useCustomQuery" checked>Use custom query?
+                        </label>
+                    </div>
+
+                    <div id="divAggregationBuilder" class="form-group" data-bind="visible: !useCustomQuery()">
+
+                        <div class="checkbox">
+                            <label>
+                          <input id="cbUseAggregationFilter" type="checkbox"
+                                 data-bind="checked: useAggFilter" checked>Filter data included in aggregations?
+                          </label>
+
+                        </div>
+
+                        <div class="form-group" data-bind="visible: useAggFilter">
+
+                            <div class="input-group required input-group-unstyled" 
+                                 data-bind="css: { 'has-error': validation().aggregationFilter, 'has-feedback': validation().aggregationFilter }">
+                                <label>Filter</label>
+                                <input type="text" class="form-control" placeholder="Enter filter using Query String syntax, e.g. 'field_name:match AND date:[2015-01-01 TO 2016-01-01] or _exists_:field_name'"
+                                    data-bind="value: aggregationFilter">
+
+                                <!--
+                                <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().aggregationFilter"></span>
+                                -->
+                                <span class="sr-only" data-bind="if: validation().aggregationFilter">(error)</span>
+
+                                <span class="input-group-addon">
+                                    <i id="iconInfoAggregationFilter" class="glyphicon glyphicon-info-sign input-group-inline-icon"
+                                       title="Aggregation Filter"></i>
+                                </span>
+
+
+                            </div>
+
+                        </div>
+
+                        <div class="aggregation-builder-container metrics-builder">
+                            <h4 class="agg-section">Metrics per Aggregation Bucket</h4>                            
+
+                            <div data-bind="foreach: { data: metrics }">
+
+                                <form class="form-inline card">
+
+                                    <div class="form-group">
+                                        <label>Metric</label>
+                                        <select class="form-control" data-bind="options: $parent.metricTypes, value: type"></select>
+                                    </div>
+
+                                    <div class="form-group" data-bind="visible: type() != 'Count'">
+                                        <label>Field</label>
+                                        <select class="form-control" data-bind="options: $parent.metricFields, value: field, optionsText: 'name', optionsValue: 'name'"></select>
+                                    </div>
+
+                                    <div class="clearfix">
+                                    </div>
+
+                                    <div class="form-group pull-right">
+                                        <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeMetric">
+                                      Remove
+                                  </button>
+                                    </div>
+
+                                    <div class="clearfix">
+                                    </div>
+
+                                </form>
+
+
+                            </div>
+
+                            <button class="btn btn-default" data-bind="click: addMetric">Add Metric
+                                <span class="glyphicon glyphicon-stats" aria-hidden="true"></span>
+                            </button>
+                            <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().metrics"></span>
+                        </div>
+
+                        <div class="aggregation-builder-container buckets-builder">
+                            <h4 class="agg-section">Aggregation Buckets</h4>
+                            
+                            <div data-bind="foreach: { data: buckets }">
+
+                                <div data-bind="css: 'bucket_level_' + $index()"></div>
+
+                                <div class="card" data-bind="css: {'invalid': validation().messages.length > 0}">
+
+                                    <div class="form-group">
+                                        <div class="form-group">
+                                            <label>Bucket</label>
+                                            <select class="form-control" data-bind="options: $parent.bucketTypes, value: type"></select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Field</label>
+                                            <select class="form-control" data-bind="options: fields, value: field"></select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-inline" data-bind="visible: type() == 'Terms'">
+
+                                        <div class="form-group">
+                                            <label>Number of Terms</label>
+                                            <input type="number" class="form-control bucket-number-input" data-bind="value: termSize">
+                                            <i data-bind="bootstrapPopover" class="glyphicon glyphicon-info-sign" data-toggle="popover" data-trigger="hover" title="Number of Terms"
+                                                data-content="Defines the maximum number of unique terms to aggregate metrics to for the selected field.  Default of '0' will retrieve all"></i>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="form-inline" data-bind="visible: type() == 'Date Histogram'">
+
+                                        <div class="form-group">
+                                            <label>Interval</label>
+                                            <select class="form-control" data-bind="options: $parent.dateHistogramIntervalOptions, value: dateHistogramType"></select>
+                                        </div>
+
+                                        <div class="form-group" 
+                                             data-bind="visible: dateHistogramType() == 'Custom', css: { 'has-error': validation().dateHistogramCustomInterval, 'has-feedback': validation().dateHistogramCustomInterval }">
+                                            <label for="inputDateHistogramIntervalCustom">Custom Interval Value</label>
+                                            <input type="text" class="form-control" id="inputDateHistogramIntervalCustom" placeholder="Enter interval value e.g. 3M, 2y, 5m"
+                                                data-bind="value: dateHistogramCustomInterval">
+                                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().dateHistogramCustomInterval"></span>
+                                            <span class="sr-only" data-bind="if: validation().dateHistogramCustomInterval">(error)</span>
+
+                                            <i data-bind="bootstrapPopover" class="glyphicon glyphicon-info-sign" data-toggle="popover" data-trigger="hover" title="Custom Interval Value"
+                                                data-content="Value that defines a custom interval.  Examples: 1w - every 1 week, 4M - every 4 months, 22y - every 22 years, 30m - every 30 minutes"></i>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="form-group" data-bind="visible: type() == 'Range'">
+                                        <label>Ranges</label>
+
+                                        <div data-bind="foreach: { data: ranges }">
+
+                                            <form class="form-inline">
+
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().from, 'has-feedback': validation().from }">
+                                                    <label>From</label>
+                                                    <input type="text" class="form-control" data-bind="value: from">
+                                                </div>
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().to, 'has-feedback': validation().to }">
+                                                    <label>To</label>
+                                                    <input type="text" class="form-control" data-bind="value: to">
+                                                </div>
+                                                <div class="form-group">
+                                                    <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeRange">
+                                              <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                          </button>
+                                                </div>
+
+                                            </form>
+
+                                        </div>
+
+                                        <button class="btn btn-default" data-bind="click: addRange">Add Range</button>
+                                        <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().ranges"></span>
+                                    </div>
+
+                                    <div class="form-group" data-bind="visible: type() == 'Date Range'">
+                                        <label>Date Ranges</label>
+
+                                        <div data-bind="foreach: { data: dateRanges }">
+
+                                            <form class="form-inline range-row" data-bind="css: { alternaterow: $index() % 2 }">
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().from, 'has-feedback': validation().from }">
+
+                                                    <label>From</label>
+                                                    <div class="form-group">
+                                                        <select class="form-control range-type-select" data-bind="options: $parent.dateRangeTypes, value: fromType"></select>
+                                                    </div>
+
+                                                    <div class="input-group date" data-bind="bootstrapDatePicker, visible: fromType() == 'Absolute'">
+                                                        <input type="text" class="form-control" data-bind="value: from">
+                                                        <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span>
+                                                    </div>
+
+                                                    <input type="number" class="form-control date-range-number" data-bind="value: relativeNumFrom, visible: fromType() == 'Relative'">
+                                                    <select class="form-control" data-bind="options: $parent.relativeOptions, value: fromRelative, visible: fromType() == 'Relative'"></select>
+
+                                                    <input type="text" class="form-control range-number-input" data-bind="value: from, visible: fromType() == 'Custom'" placeholder="Enter custom date e.g. 'now-3M/M'">
+                                                    <i data-bind="visible: fromType() == 'Custom', bootstrapPopover, bootstrapPopoverType: 'rich', bootstrapPopoverContent: helperText" class="glyphicon glyphicon-info-sign" title="Custom"></i>
+
+                                                </div>
+                                                <div class="form-group" data-bind="css: { 'has-error': validation().to, 'has-feedback': validation().to }">
+
+                                                    <label>To</label>
+                                                    <div class="form-group">
+                                                        <select class="form-control range-type-select" data-bind="options: $parent.dateRangeTypes, value: toType"></select>
+                                                    </div>
+
+                                                    <div class="input-group date" data-bind="bootstrapDatePicker, visible: toType() == 'Absolute'">
+                                                        <input type="text" class="form-control" data-bind="value: to">
+                                                        <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span>
+                                                    </div>
+
+                                                    <input type="number" class="form-control date-range-number" data-bind="value: relativeNumTo, visible: toType() == 'Relative'">
+                                                    <select class="form-control" data-bind="options: $parent.relativeOptions, value: toRelative, visible: toType() == 'Relative'"></select>
+
+                                                    <input type="text" class="form-control range-number-input" data-bind="value: to, visible: toType() == 'Custom'">
+                                                    <i data-bind="visible: fromType() == 'Custom', bootstrapPopover, bootstrapPopoverType: 'rich', bootstrapPopoverContent: helperText" class="glyphicon glyphicon-info-sign" title="Custom"></i>
+
+
+                                                </div>
+                                                <div class="form-group">
+                                                    <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeDateRange">
+                                              <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                          </button>
+                                                </div>
+                                            </form>
+
+                                        </div>
+
+                                        <button class="btn btn-default" data-bind="click: addDateRange">Add Range</button>
+                                        <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().ranges"></span>
+                                    </div>
+
+                                    <div class="clearfix">
+                                    </div>
+
+                                    <div class="form-group pull-right" style="margin-bottom: 0px">
+                                        <button type="button" class="btn btn-default" aria-label="Remove" data-bind="click: $parent.removeBucket">
+                                      Remove
+                                  </button>
+                                    </div>
+
+                                    <div class="clearfix">
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <button class="btn btn-default" data-bind="click: addBucket">Add Bucket
+                                <span class="glyphicon glyphicon-th-large" aria-hidden="true"></span>
+                           </button>
+                           <span class="glyphicon glyphicon-warning-sign invalid-icon" data-bind="visible: validation().buckets"></span>
+                        </div>
+                    </div>
+
+                    <div id="divAggregationQuery" class="form-group" data-bind="visible: useCustomQuery">
+                        <label>Query</label>
+
+                        <div id="divElasticsearchAggQueryEditor" 
+                             class="query-editor" 
+                             data-bind="aceEditor, aceEditorText: customQuery">
+
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+                </div>
+
+                <button class="btn btn-default" data-bind="click: preview">
+                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                    Preview
+                </button>
+
+                <button class="btn btn-primary" data-bind="click: submit">
+                    Submit
+                </button>
+
+            </div>
+
+        </div>
+
+<div class="row">
+
+ <div class="col-md-10">
+     
+        <div id="preview-results" class="container preview-results" data-bind="visible: isPreviewVisible">
+
+            
+
+               
+
+            <div class="table-container">
+ 
+                <h3>Preview Data</h3>
+                <div class="table-responsive">
+
+                    <div id="previewTableStickyHeaderAnchor"></div>
+
+                <table class="table table-hover">
+                    <thead>
+                        <tr data-bind="foreach: { data: previewFields }">
+                            <th data-bind="text: $data"></th>
+                        </tr>
+                    </thead>
+
+                    <tbody data-bind="foreach: { data: previewData }">
+                        <tr>
+                            <!--<th scope="row" data-bind="text: $index"></th> -->
+
+                            <!-- ko foreach: $parent.previewFields -->
+                            
+                            <td data-bind="text: $parent[$data]">
+                                <span data-bind="text: $parent.index"></span>
+                                <span data-bind="text: $parents[1].previewData()[$parent.index]"></span>
+                            </td>
+                            <!-- /ko -->
+                       </tr>
+                   </tbody>
+                </table>
+                </div>
+
+            </div>
+
+            </div>
+
+            <div class="preview-loading" data-bind="visible: isPreviewDataLoading">
+                
+                <span class="preview-text">Loading...</span>
+                <div class="progress">
+                    <div class="indeterminate"></div>
+                </div>
+
+            </div>
+
+            </div>
+
+        </div>
+
+        <div class="row" style="display: none">
+            <div class="col-md-10 col-md-offset-1">
+                <div class="alert alert-success">
+                    <p>To add more rows of data you will need to:</p>
+                    <ul>
+                        <li>Select Tableau's data menu
+                            <li>Select your data source name
+                                <li>Then select incremental refresh from extract menu.
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Start here-->
+    <div class="modal fade bs-example-modal-sm" id="myPleaseWait" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">
+                        Querying data...
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-info
+                    progress-bar-striped active" style="width: 100%">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal ends Here -->
+
+    <script src="https://connectors.tableau.com/libs/tableauwdc-1.1.1.js" type="text/javascript"></script>
+
+    
+    
+    <script src="elasticsearch-connector.min.js" type="text/javascript"></script>
+    
+
+</body>
+
+</html>
