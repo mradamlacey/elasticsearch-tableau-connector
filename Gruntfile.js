@@ -140,6 +140,9 @@ require('load-grunt-tasks')(grunt);
               files: {
                 'dist/elasticsearch-connector.min.js': [
                         'dist-tmp/jquery*.js',
+                        'dist-tmp/ace.js',
+                        'dist-tmp/theme-github.js',
+                        'dist-tmp/mode-json.js',
                         'dist-tmp/bootstrap.js',
                         'dist-tmp/bootstrap3-typeahead.js',
                         'dist-tmp/bootstrap-datepicker.js',

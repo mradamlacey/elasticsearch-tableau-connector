@@ -163,8 +163,9 @@ var elasticsearchConnector = (function () {
                 getNextScrollResult(true, lastRecordToken, function (err, result) {
                     if(err){
                         abort(err, true);
+                    } else {
+                      console.log('[getTableData] processed next scroll result, count: ' + result.results.length);
                     }
-                    console.log('[getTableData] processed next scroll result, count: ' + result.results.length);
                 })
             }
         }
