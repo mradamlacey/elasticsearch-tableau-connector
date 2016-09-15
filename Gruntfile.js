@@ -112,7 +112,7 @@ require('load-grunt-tasks')(grunt);
             { src: 'resources/theme-monokai.js', dest: 'dist-tmp/theme-monokai.js', expand: false },
             { src: 'resources/theme-github.js', dest: 'dist-tmp/theme-github.js', expand: false },
             { src: 'resources/theme-solarized_light.js', dest: 'dist-tmp/theme-solarized_light.js', expand: false },
-            { src: 'resources/elasticsearch-logo.png', dest: 'dist-tmp/elasticsearch-logo.png', expand: false }
+            { src: 'resources/elasticsearch-logo.png', dest: 'dist/css/elasticsearch-logo.png', expand: false }
         ]
       }
     },
@@ -166,10 +166,10 @@ require('load-grunt-tasks')(grunt);
          },
          dist: {
             files: {
-                'dist/elasticsearch-connector.min.css': ['dist-tmp/bootstrap.css', 
-                                                         'dist-tmp/bootstrap-datepicker.css', 
-                                                         'dist-tmp/toastr.css',
-                                                         'dist-tmp/elasticsearch-connector.css']
+                'dist/css/elasticsearch-connector.min.css': ['dist-tmp/bootstrap.css', 
+                                                             'dist-tmp/bootstrap-datepicker.css', 
+                                                             'dist-tmp/toastr.css',
+                                                             'dist-tmp/elasticsearch-connector.css']
             }
          }
       },
