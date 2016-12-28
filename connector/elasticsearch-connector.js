@@ -727,7 +727,15 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
-                    item[field] = moment.utc(item[field].replace(' +', '+')
+                    val = null;
+                    if(_.isArray(item[field])){
+                        val = item[field][0]
+                    }
+                    else{
+                        val = item[field]
+                    }
+
+                    item[field] = moment.utc(val.replace(' +', '+')
                         .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
                 });
                 _.each(connectionData.geoPointFields, function (field) {
@@ -736,13 +744,28 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
-                    var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
-                    if (latLonParts.length != 2) {
+                    var lat, lon = 0;
+
+                    if( _.isArray(item[field.name])){
+                        lat = item[field.name][0];
+                        lon = item[field.name][1];
+                    }
+                    else if( _.isString(item[field.name])){
+                        var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
+                        if (latLonParts.length != 2) {
+                            console.log('[getTableData] Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
+                            return;
+                        }
+                        lat = parseFloat(latLonParts[0]);
+                        lon = parseFloat(latLonParts[1]);
+                    }
+                    else{
                         console.log('[getTableData] Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
                         return;
                     }
-                    item[field.name + '_latitude'] = parseFloat(latLonParts[0]);
-                    item[field.name + '_longitude'] = parseFloat(latLonParts[1]);
+
+                    item[field.name + '_latitude'] = lat;
+                    item[field.name + '_longitude'] = lon;
                 });
                 item._id = hits[ii]._id;
                 item._sequence = totalCount + ii;
