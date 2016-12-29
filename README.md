@@ -14,6 +14,10 @@ that it was executed.
 The connector works by retrieving 'pages' of data from Elasticsearch up to either the limit specified, or up to the total
 number of hits.  The user can override the batch size to retrieve more records per page if desired.
 
+# Compatibility
+
+This release supports supports **Tableau 9.1.6 or later, 9.2.4 or later, and 9.3.**
+
 # Known Issues and Limitations
 
 - Fields with `array` or`object` they will be ignored
