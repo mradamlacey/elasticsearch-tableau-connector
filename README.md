@@ -301,4 +301,4 @@ For `geo_point` fields in Elasticsearch, this connector will create two separate
 
 ![DialogTech Logo](https://www.dialogtech.com/wp-content/themes/ifbyphone/theme/images/logo-2x.png "DialogTech Logo")
 
-This project has been made in possible in part by support from [DialogTech](http://www.dialogtech.com)
+This project has been made possible in part by support from [DialogTech](http://www.dialogtech.com)
