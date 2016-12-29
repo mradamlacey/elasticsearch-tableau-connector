@@ -233,11 +233,18 @@ Supported metrics:
 
 ### Buckets
 
+ - [Terms](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html)
+ - [Range](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-range-aggregation.html)
+ - [Date Range](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-daterange-aggregation.html)
+ - [Date Histogram](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-datehistogram-aggregation.html)
+
 ### Preview
 
 The connector supports requesting data for Elasticsearch from the UI to preview the data that will be created in the data extract in Tableau.  The preview button will send this
 request to Elasticsearch based on the current configuration and populate a table at the bottom of the view.  This feature is useful for debugging 
 to make sure any custom queries and other configuration returns a valid response.
+
+> Note - it is recommended to set a small limit if in 'Search result mode' to limit the amount of data returned
 
 ### Submit
 
@@ -292,5 +299,6 @@ For `geo_point` fields in Elasticsearch, this connector will create two separate
 
 # Sponsorship
 
-This project has been made in possible in part by support from ![DialogTech Logo](https://www.dialogtech.com/wp-content/themes/ifbyphone/theme/images/logo-2x.png "DialogTech Logo")
-[DialogTech](http://www.dialogtech.com)
+![DialogTech Logo](https://www.dialogtech.com/wp-content/themes/ifbyphone/theme/images/logo-2x.png "DialogTech Logo")
+
+This project has been made in possible in part by support from [DialogTech](http://www.dialogtech.com)
