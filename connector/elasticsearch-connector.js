@@ -1,14 +1,14 @@
 var elasticsearchConnector = (function () {
 
     var elasticsearchTableauDataTypeMap = {
-        string: 'string',
-        float: 'float',
-        long: 'int',
-        integer: 'int',
-        double: 'float',
-        date: 'datetime',
-        boolean: 'bool',
-        geo_point: 'string'
+        string:  tableau.dataTypeEnum.string,
+        float:  tableau.dataTypeEnum.float,
+        long:  tableau.dataTypeEnum.int,
+        integer:  tableau.dataTypeEnum.int,
+        double:  tableau.dataTypeEnum.float,
+        date:  tableau.dataTypeEnum.datetime,
+        boolean:  tableau.dataTypeEnum.bool,
+        geo_point:  tableau.dataTypeEnum.string
     },
         elasticsearchFields = [],
         elasticsearchFieldsMap = {},
@@ -115,7 +115,7 @@ var elasticsearchConnector = (function () {
 
     var myConnector = tableau.makeConnector();
 
-    myConnector.getColumnHeaders = function () {
+    myConnector.getSchema = function (schemaCallback) {
 
         var connectionData;
 
@@ -127,54 +127,54 @@ var elasticsearchConnector = (function () {
             return;
         }
 
-        console.log('getColumnHeaders called, headers: ' + _.pluck(connectionData.fields, 'name').join(', '));
-        tableau.headersCallback(_.pluck(connectionData.fields, 'name'), _.pluck(connectionData.fields, 'dataType'));
+        console.log('[connector:getSchema] column names: ' + _.pluck(connectionData.fields, 'name').join(', '));
+
+        var cols = _.map(connectionData.fields, function(field){
+            return {
+                id: field.name,
+                dataType: field.dataType
+            };
+        });
+
+        var tableInfo = {
+            id : connectionData.connectionName || "default",
+            columns : cols
+        };
+
+        schemaCallback([tableInfo]);
     };
 
     var totalCount = 0,
         searchHitsTotal = -1;
 
-    myConnector.getTableData = function (lastRecordToken) {
+    myConnector.getData = function (table, doneCallback) {
 
-        console.log('[getTableData] lastRecordToken: ' + lastRecordToken);
+        var lastRecordToken = table.incrementValue || null;
+
+        console.log('[connector:getData] lastRecordToken: ' + lastRecordToken);
         var connectionData = JSON.parse(tableau.connectionData);
 
         if (connectionData.elasticsearchAuthenticate) {
             var creds = getAuthCredentials(connectionData);
 
-            console.log('[getTableData] Using HTTP Basic Auth, username: ' +
+            console.log('[connector:getData] Using HTTP Basic Auth, username: ' +
                 creds.username + ', password: ' + creds.password.replace(/./gm, "*"));
         }
 
         if (connectionData.elasticsearchResultMode == "search") {
-            // First time this is invoked
-            if (!lastRecordToken) {
-                console.log('[getTableData] open search scroll window...');
-                openSearchScrollWindow(true, function (err, result) {
-                    if(err){
-                        abort(err, true);
-                    }
-                    console.log('[getTableData] opened scroll window, scroll id: ' + result.scrollId);
-                });
-            }
-            else {
-                console.log('[getTableData] getting next scroll result...');
 
-                getNextScrollResult(true, lastRecordToken, function (err, result) {
-                    if(err){
-                        abort(err, true);
-                    } else {
-                      console.log('[getTableData] processed next scroll result, count: ' + result.results.length);
-                    }
-                })
-            }
+            getSearchResponse(true, table, doneCallback, function(err, result){
+                console.log("[connector:getData] Finished retrieving search response");
+                doneCallback();
+            });
         }
+
         if (connectionData.elasticsearchResultMode == "aggregation") {
 
-            console.log('[getTableData] getting aggregation response');
+            console.log('[connector:getData] getting aggregation response');
 
-            getAggregationResponse(true, function(err, data){
-                console.log("[getTableData] Finished retrieving aggregation response");
+            getAggregationResponse(true, table, function(err, data){
+                console.log("[connector:getData] Finished retrieving aggregation response");
 
                 if(err){
                     abort(err, true);
@@ -183,11 +183,9 @@ var elasticsearchConnector = (function () {
             });
         }
 
-
-
     };
 
-    myConnector.init = function () {
+    myConnector.init = function (cb) {
 
         console.log('[connector.init] fired');
 
@@ -198,10 +196,10 @@ var elasticsearchConnector = (function () {
             initUIControls();
         }
 
-        tableau.initCallback();
+        cb();
     }
 
-    myConnector.shutdown = function () {
+    myConnector.shutdown = function (shutdownCallback) {
         endTime = moment();
         var runTime = endTime.diff(startTime) / 1000;
         $('#myPleaseWait').modal('hide');
@@ -214,8 +212,8 @@ var elasticsearchConnector = (function () {
             scrollTop: $("#divMessage").offset().top
         }, 500);
 
-        console.log('[connector.shutdown] callback...');
-        tableau.shutdownCallback();
+        console.log('[connector:shutdown] callback...');
+        shutdownCallback();
     };
 
     tableau.registerConnector(myConnector);
@@ -546,7 +544,38 @@ var elasticsearchConnector = (function () {
         return aggsQuery;
     };
 
-    var openSearchScrollWindow = function (tableauDataMode, cb) {
+    var getSearchResponse = function (tableauDataMode, table, cb) {
+        console.log('[getSearchResponse]...');
+
+        openSearchScrollWindow(tableauDataMode, table, function (err, result) {
+            if (err) {
+                abort(err, true);
+            }
+            console.log('[getSearchResponse] opened scroll window, scroll id: ' + result.scrollId);
+
+            getRemainingScrollResults(tableauDataMode, table, result.scrollId, function (err, scrollResult) {
+                if (err) {
+                    abort(err, true);
+                    if(cb){
+                        cb(err, null);
+                    }
+                }
+                console.log('[getSearchResponse] processed remaining scroll results, count: ' + scrollResult.results.length);
+                console.log("[getSearchResponse] appending initial scroll windows results (" + result.numProcessed + ")");
+
+                scrollResult.numProcessed += result.numProcessed;
+                if(!tableauDataMode){
+                    scrollResult.results = scrollResult.results.concat(result.results);
+                }
+                if(cb){
+                    cb(null, scrollResult);
+                }
+            });
+
+        });
+    };
+
+    var openSearchScrollWindow = function (tableauDataMode, table, cb) {
 
         totalCount = 0;
         searchHitsTotal = -1;
@@ -592,9 +621,11 @@ var elasticsearchConnector = (function () {
             },
             success: function (data) {
 
-                var result = processSearchResults(tableauDataMode, data);
+                var result = processSearchResults(tableauDataMode, table, data);
 
-                cb(null, result);
+                if(cb){
+                    cb(null, result);
+                }
             },
             error: function (xhr, ajaxOptions, err) {
                 if (xhr.status == 0) {
@@ -607,7 +638,7 @@ var elasticsearchConnector = (function () {
         });
     };
 
-    var getNextScrollResult = function (tableauDataMode, scrollId, cb) {
+    var getRemainingScrollResults = function (tableauDataMode, table, scrollId, cb) {
         var connectionData = JSON.parse(tableau.connectionData);
 
         if (!connectionData.elasticsearchUrl) {
@@ -632,11 +663,32 @@ var elasticsearchConnector = (function () {
                 beforeSendAddAuthHeader(xhr, connectionData);
             },
             success: function (data) {
-                var result = processSearchResults(tableauDataMode, data);
+                var result = processSearchResults(tableauDataMode, table, data);
 
-                if (cb) {
-                    cb(null, result);
+                if (result.more) {
+                    getRemainingScrollResults(tableauDataMode, table, result.scrollId, function (err, innerResult) {
+
+                        console.log("[getRemainingScrollResults] In callback of handling more results, adding " + innerResult.numProcessed + " to running total of: " + result.numProcessed);
+                        innerResult.numProcessed += result.numProcessed;
+                        // If collecting results for preview mode (and not Tableau data gather mode) - store the entire retrieved result set
+                        if(!tableauDataMode){
+                            innerResult.results = innerResult.results.concat(result.results);
+                        }
+                        
+                        if (cb) {
+                            cb(null, innerResult);
+                        }
+
+                    });
                 }
+                else{
+                    console.log("[getRemainingScrollResults] No more search results to request and processed, done")
+                    if (cb) {
+                        cb(null, result);
+                    }
+                }
+
+
             },
             error: function (xhr, ajaxOptions, err) {
                 if (xhr.status == 0) {
@@ -649,7 +701,7 @@ var elasticsearchConnector = (function () {
         });
     };
 
-    var processSearchResults = function (tableauDataMode, data) {
+    var processSearchResults = function (tableauDataMode, table, data) {
 
         var connectionData = JSON.parse(tableau.connectionData);
         searchHitsTotal = data.hits.total;
@@ -728,7 +780,15 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
-                    item[field] = moment.utc(item[field].replace(' +', '+')
+                    val = null;
+                    if(_.isArray(item[field])){
+                        val = item[field][0]
+                    }
+                    else{
+                        val = item[field]
+                    }
+
+                    item[field] = moment.utc(val.replace(' +', '+')
                         .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
                 });
                 _.each(connectionData.geoPointFields, function (field) {
@@ -737,13 +797,28 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
-                    var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
-                    if (latLonParts.length != 2) {
+                    var lat, lon = 0;
+
+                    if( _.isArray(item[field.name])){
+                        lat = item[field.name][0];
+                        lon = item[field.name][1];
+                    }
+                    else if( _.isString(item[field.name])){
+                        var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
+                        if (latLonParts.length != 2) {
+                            console.log('[getTableData] Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
+                            return;
+                        }
+                        lat = parseFloat(latLonParts[0]);
+                        lon = parseFloat(latLonParts[1]);
+                    }
+                    else{
                         console.log('[getTableData] Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
                         return;
                     }
-                    item[field.name + '_latitude'] = parseFloat(latLonParts[0]);
-                    item[field.name + '_longitude'] = parseFloat(latLonParts[1]);
+
+                    item[field.name + '_latitude'] = lat;
+                    item[field.name + '_longitude'] = lon;
                 });
                 item._id = hits[ii]._id;
                 item._sequence = totalCount + ii;
@@ -768,22 +843,22 @@ var elasticsearchConnector = (function () {
                 connectionData.limit + ' more records?: ' + moreRecords + ', total search hits: ' + searchHitsTotal);
 
             if(tableauDataMode){
-                tableau.dataCallback(toRet, data._scroll_id, moreRecords);
+                table.appendRows(toRet);
             }            
 
-            return { results: toRet, scrollId: data._scroll_id };
+            return { results: toRet, scrollId: data._scroll_id, numProcessed: toRet.length, more: moreRecords };
 
         } else {
-            console.log("[getNextScrollResult] No results found for Elasticsearch query: " + JSON.stringify(requestData));
+            console.log("[getRemainingScrollResults] No results found for Elasticsearch query: " + JSON.stringify(requestData));
             if(tableauDataMode){
-                tableau.dataCallback([]);
+                table.appendRows([]);
             }            
 
-            return ({results: [], scrollId: data._scroll_id});
+            return ({results: [], scrollId: data._scroll_id, numProcessed: 0, more: false});
         }
     };
 
-    var getAggregationResponse = function (tableauDataMode, cb) {
+    var getAggregationResponse = function (tableauDataMode, table, cb) {
 
         var connectionData = JSON.parse(tableau.connectionData);
 
@@ -834,7 +909,9 @@ var elasticsearchConnector = (function () {
                     }
                 }
 
-                tableau.dataCallback(result, null, false);
+                if(tableauDataMode){
+                    table.appendRows(result);
+                }
 
                 if (cb) {
                     cb(null, result);
@@ -1214,8 +1291,9 @@ var elasticsearchConnector = (function () {
         updateAggregationData: updateAggregationData,
         getElasticsearchConnectionFieldInfo: getElasticsearchConnectionFieldInfo,
         getElasticsearchTypeMapping: getElasticsearchTypeMapping,
+        getSearchResponse: getSearchResponse,
         openSearchScrollWindow: openSearchScrollWindow,
-        getNextScrollResult: getNextScrollResult,
+        getRemainingScrollResults: getRemainingScrollResults,
         getAggregationResponse: getAggregationResponse
     }
 
