@@ -14,11 +14,23 @@ that it was executed.
 The connector works by retrieving 'pages' of data from Elasticsearch up to either the limit specified, or up to the total
 number of hits.  The user can override the batch size to retrieve more records per page if desired.
 
+# Compatibility
+
+The 2.0 release (and currently on `master`) supports Tableau 10.0 or later.
+
+The 1.0 release (in the `release-1.0` branch) support Tableau 9.1.6 or later, 9.2.4 or later, and 9.3.
+
+
 # Known Issues and Limitations
 
-- Fields with `array` or`object` they will be ignored
+- Fields with `array` values will have the value from the first element used, otherwise the entire array will be passed as a value (which probably will not display in Tableau
+  correctly)
+- Extremely large datasets can cause issues and crash Tableau as all available memory is consumed
 
 # Configuration
+
+## Enable `CORS`
+
 - You must enable CORS support in your Elasticsearch server.  Set the following setting in `elasticsearch.yml`:
 
 ```yaml
@@ -33,12 +45,19 @@ considered insecure:
 http.cors.allow-origin: "*"
 ```
 
-If you use some other front end HTTP proxy in front of your Elasticsearch cluster, you will need to make sure that
-CORS requests are allowed, including authorization headers.
-
-
 For more detailed information on Elasticsearch configuration options refer to:
 [Elasticsearch Configuration Reference](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html)
+
+## Enabling `CORS` with a proxy
+
+As an alternative to enabling `CORS` through the Elasticsearch configuration file, you can setup a proxy in front of Elasticsearch that
+will set the property HTTP response headers.
+
+As an example, in AWS - here's a link that describes how to setup an API gateway that sends CORS headers: http://enable-cors.org/server_awsapigateway.html
+
+An instance of an API gateway (with CORS enabled) is used that forwards requests to your Elasticsearch instance.
+
+The Elasticsearch URL used in the Tableau connector configuration should be the URL of your API Gateway.
 
 # Building and Running
 
@@ -232,24 +251,24 @@ The submit button will save the configuration for the data extract with Tableau 
 For types that include mapping with objects (fields with their set of properties), a concatenated field name will be created.  For the following mapping:
 ```json
 {
-    person: {
-        properties: {
-            firstName: {
-                type: string
+    "person": {
+        "properties": {
+            "firstName": {
+                "type": "string"
             },
-            lastName: {
-                type: string
+            "lastName": {
+                "type": "string"
             },
-            address: {
-                properties: {
-                    street: {
-                        type: string
+            "address": {
+                "properties": {
+                    "street": {
+                        "type": "string"
                     },
-                    city: {
-                        type: string
+                    "city": {
+                        "type": "string"
                     },
-                    zip: {
-                        type: string
+                    "zip": {
+                        "type": "string"
                     }
                 }
             }
@@ -260,14 +279,19 @@ For types that include mapping with objects (fields with their set of properties
 
 Will create the following fields:
 
- - person.firstName
- - person.lastName
- - person.address.street
- - person.address.city
- - person.address.zip
+ - `person.firstName`
+ - `person.lastName`
+ - `person.address.street`
+ - `person.address.city`
+ - `person.address.zip`
 
 ### `geo_point`
 
 For `geo_point` fields in Elasticsearch, this connector will create two separate Tableau fields by parsing the `lat, lon` value:
 - Latitude - field will be named `<field-name>_latitude` - float type
 - Longitude - field will be named `<field-name>_longitude` - float type
+
+# Sponsorship
+
+This project has been made in possible in part by support from [logo]: https://www.dialogtech.com/wp-content/themes/ifbyphone/theme/images/logo-2x.png "DialogTech logo" 
+(DialogTech)[http://www.dialogtech.com]
