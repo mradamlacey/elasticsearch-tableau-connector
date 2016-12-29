@@ -104,13 +104,10 @@ var app = (function () {
         self.previewFields = ko.observableArray([]);
         self.previewData = ko.observableArray([]);
 
-        self.previewDataRaw = [];
-
         self.preview = function () {
 
             self.previewFields.removeAll();
             self.previewData.removeAll();
-            self.previewDataRaw = [];
 
             self.isPreviewVisible(true);
             self.isPreviewDataLoading(true);
@@ -136,8 +133,7 @@ var app = (function () {
                 tableauData.updateProperties(esFieldData);
 
                 if (self.resultMode() == "search") {
-                    elasticsearchConnector.openSearchScrollWindow(false, function (err, result) {
-
+                    elasticsearchConnector.getSearchResponse(false, null, function(err, result){
                         if (err) {
                             self.isPreviewVisible(false);
                             self.isPreviewDataLoading(false);
@@ -146,14 +142,14 @@ var app = (function () {
 
                         console.log("[App] - preview - opened search scroll window");
 
-                        self.previewDataRaw = self.previewDataRaw.concat(result.results);
-                        elasticsearchConnector.getNextScrollResult(false, result.scrollId, self.processNextScrollResult);
+                        self.previewData(result.results);
+                        self.isPreviewDataLoading(false);
                     });
                 }
                 
                 if(self.resultMode() == "aggregation"){
 
-                    elasticsearchConnector.getAggregationResponse(false, function(err, result){
+                    elasticsearchConnector.getAggregationResponse(false, null, function(err, result){
                         
                         if (err) {
                             self.isPreviewVisible(false);
@@ -171,24 +167,6 @@ var app = (function () {
             });
 
 
-        };
-
-        self.processNextScrollResult = function(err, result){
-
-            if(err){     
-                self.isPreviewVisible(false);
-                self.isPreviewDataLoading(false);        
-                return toastr.error("Error getting preview data: " + err);
-            }
-
-            if(result.results.length == 0){
-                self.isPreviewDataLoading(false); 
-                self.previewData(self.previewDataRaw);
-                return;
-            }
-
-            self.previewDataRaw = self.previewDataRaw.concat(result.results);            
-            elasticsearchConnector.getNextScrollResult(false, result.scrollId, self.processNextScrollResult);
         };
 
         self.submit = function(){
@@ -543,7 +521,6 @@ var app = (function () {
 
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
-        vm.previewDataRaw = [];
 
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
@@ -555,7 +532,6 @@ var app = (function () {
 
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
-        vm.previewDataRaw = [];
 
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
@@ -564,7 +540,6 @@ var app = (function () {
     vm.elasticsearchType.subscribe(function(newValue){
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
-        vm.previewDataRaw = [];
 
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
@@ -573,7 +548,6 @@ var app = (function () {
     vm.searchCustomQuery.subscribe(function(newValue){
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
-        vm.previewDataRaw = [];
 
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
@@ -591,7 +565,6 @@ var app = (function () {
 
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
-        vm.previewDataRaw = [];
         vm.isPreviewVisible(false);
         
         vm.aggregations.clear();
