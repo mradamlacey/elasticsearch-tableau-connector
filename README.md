@@ -16,10 +16,9 @@ number of hits.  The user can override the batch size to retrieve more records p
 
 # Compatibility
 
-The 2.0 release (and currently on `master`) supports Tableau 10.0 or later.
+The 2.0 release (in the `release-2.0` branch and current development version in `master`) supports **Tableau 10.0 or later**.
 
-The 1.0 release (in the `release-1.0` branch) support Tableau 9.1.6 or later, 9.2.4 or later, and 9.3.
-
+The 1.0 release (in the `release-1.0` branch) supports **Tableau 9.1.6 or later, 9.2.4 or later, and 9.3**.
 
 # Known Issues and Limitations
 
@@ -293,5 +292,5 @@ For `geo_point` fields in Elasticsearch, this connector will create two separate
 
 # Sponsorship
 
-This project has been made in possible in part by support from [logo]: https://www.dialogtech.com/wp-content/themes/ifbyphone/theme/images/logo-2x.png "DialogTech logo" 
-(DialogTech)[http://www.dialogtech.com]
+This project has been made in possible in part by support from ![DialogTech Logo](https://www.dialogtech.com/wp-content/themes/ifbyphone/theme/images/logo-2x.png "DialogTech Logo")
+[DialogTech](http://www.dialogtech.com)
