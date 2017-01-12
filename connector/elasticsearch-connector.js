@@ -179,7 +179,8 @@ var elasticsearchConnector = (function () {
                 if(err){
                     abort(err, true);
                 }
-                
+
+                doneCallback();
             });
         }
 
