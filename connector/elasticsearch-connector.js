@@ -1,14 +1,16 @@
 var elasticsearchConnector = (function () {
 
     var elasticsearchTableauDataTypeMap = {
-        string: 'string',
-        float: 'float',
-        long: 'int',
-        integer: 'int',
-        double: 'float',
-        date: 'datetime',
-        boolean: 'bool',
-        geo_point: 'string'
+        string:  'string',
+        keyword:  'string',
+        text:  'string',
+        float:  'float',
+        long:  'int',
+        integer:  'int',
+        double:  'float',
+        date:  'datetime',
+        boolean:  'bool',
+        geo_point:  'string'
     },
         elasticsearchFields = [],
         elasticsearchFieldsMap = {},
@@ -25,7 +27,10 @@ var elasticsearchConnector = (function () {
     var addElasticsearchField = function (name, esType, format, hasLatLon) {
 
         if (_.isUndefined(elasticsearchTableauDataTypeMap[esType])) {
-            console.log("Unsupported Elasticsearch type: " + esType + " for field: " + name);
+            console.log("Unsupported Elasticsearch type: " + esType + " for field: " + name + ", defaulting to string");
+            elasticsearchFields.push({ name: name, dataType: 'string' });
+            elasticsearchFieldsMap[name] = { type: 'string', format: format };
+
             return;
         }
 
@@ -461,9 +466,12 @@ var elasticsearchConnector = (function () {
 
             if(bucket.type == "Terms"){
                 currentAg[bucketName][bucketTypeMap[bucket.type]] = {
-                    field: bucket.field,
-                    size: bucket.termSize
+                    field: bucket.field
                 };
+
+                if(bucket.termSize > 0){
+                    currentAg[bucketName][bucketTypeMap[bucket.type]].size = bucket.termSize;
+                }
             }
             if(bucket.type == "Date Range"){
 
@@ -728,12 +736,20 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
+                    if (!_.isString(item[field])){
+                        return;
+                    }
+
                     item[field] = moment.utc(item[field].replace(' +', '+')
                         .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
                 });
                 _.each(connectionData.geoPointFields, function (field) {
 
                     if (!item[field.name]) {
+                        return;
+                    }
+
+                    if (!_.isString(item[field])){
                         return;
                     }
 
