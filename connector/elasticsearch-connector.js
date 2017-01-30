@@ -2,6 +2,8 @@ var elasticsearchConnector = (function () {
 
     var elasticsearchTableauDataTypeMap = {
         string:  tableau.dataTypeEnum.string,
+        keyword:  tableau.dataTypeEnum.string,
+        text:  tableau.dataTypeEnum.string,
         float:  tableau.dataTypeEnum.float,
         long:  tableau.dataTypeEnum.int,
         integer:  tableau.dataTypeEnum.int,
@@ -25,7 +27,10 @@ var elasticsearchConnector = (function () {
     var addElasticsearchField = function (name, esType, format, hasLatLon) {
 
         if (_.isUndefined(elasticsearchTableauDataTypeMap[esType])) {
-            console.log("Unsupported Elasticsearch type: " + esType + " for field: " + name);
+            console.log("Unsupported Elasticsearch type: " + esType + " for field: " + name + ", defaulting to string");
+            elasticsearchFields.push({ name: name, dataType: tableau.dataTypeEnum.string });
+            elasticsearchFieldsMap[name] = { type: tableau.dataTypeEnum.string, format: format };
+
             return;
         }
 
@@ -460,9 +465,12 @@ var elasticsearchConnector = (function () {
 
             if(bucket.type == "Terms"){
                 currentAg[bucketName][bucketTypeMap[bucket.type]] = {
-                    field: bucket.field,
-                    size: bucket.termSize
+                    field: bucket.field
                 };
+
+                if(bucket.termSize > 0){
+                    currentAg[bucketName][bucketTypeMap[bucket.type]].size = bucket.termSize;
+                }
             }
             if(bucket.type == "Date Range"){
 
