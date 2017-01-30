@@ -488,11 +488,14 @@ var aggregations = (function () {
 
                         newFields = _.map(vm.fields(), function(field){
 
-                            if(field.type == "string" || field.type == "double" ||
+                            console.log("field type: " + field.type);
+
+                            if(field.type == "string" || field.type == "text" || field.type == "keyword" || field.type == "double" ||
                                field.type == "int" || field.type == "long" || field.type == "date"){
                                 return field.name;
                             }
                             else{
+                                console.log("Field type: " + field.type + " not supported for Terms aggregation");
                                 return null;
                             }
                         });
