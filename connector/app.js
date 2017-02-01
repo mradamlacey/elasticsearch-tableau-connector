@@ -127,7 +127,7 @@ var app = (function () {
                 }
 
                 _.each(esFieldData.fields, function(field){
-                    self.previewFields.push(field.name);
+                    self.previewFields.push(elasticsearchConnector.toSafeTableauFieldName(field.name));
                 });
 
                 tableauData.updateProperties(esFieldData);
