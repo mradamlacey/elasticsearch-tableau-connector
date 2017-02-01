@@ -248,6 +248,22 @@ to make sure any custom queries and other configuration returns a valid response
 
 The submit button will save the configuration for the data extract with Tableau and continue the process of creating the extract.
 
+## Elasticsearch Field Renaming
+
+Tableau only supports field names with alphanumeric characters and underscores.  The connector will replace non-supported characters with '_' underscore characters.
+
+e.g.:
+
+| Elasticsearch field name        | Resulting 'safe' Tableau field name  |
+| ------------- |:-------------:|
+| `field_name`    | `field_name` |
+| `@timestamp`     | `_timestamp`      |
+| `name.first` | `name_first`      |
+| `car.@name` | `car__name`      |
+
+> Note: Field names available to select from the Connector UI will be the Elasticsearch field names, but data in Preview Mode and what is actually
+provided to Tableau will be converted to the safe names
+
 ## Handling Elasticsearch Data Types
 
 ### `object`
@@ -283,11 +299,11 @@ For types that include mapping with objects (fields with their set of properties
 
 Will create the following fields:
 
- - `person.firstName`
- - `person.lastName`
- - `person.address.street`
- - `person.address.city`
- - `person.address.zip`
+ - `person_firstName`
+ - `person_lastName`
+ - `person_address_street`
+ - `person_address_city`
+ - `person_address_zip`
 
 ### `geo_point`
 
