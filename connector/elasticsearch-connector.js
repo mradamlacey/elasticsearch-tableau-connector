@@ -138,8 +138,6 @@ var elasticsearchConnector = (function () {
             return;
         }
 
-        console.log('[connector:getSchema] column names: ' + _.pluck(connectionData.fields, 'name').join(', '));
-
         var cols = _.map(connectionData.fields, function(field){
 
             return {
@@ -147,6 +145,8 @@ var elasticsearchConnector = (function () {
                 dataType: field.dataType
             };
         });
+
+        console.log('[connector:getSchema] column names: ' + _.pluck(cols, 'id').join(', '));
 
         var tableInfo = {
             id : connectionData.connectionName || "default",
