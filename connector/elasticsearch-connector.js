@@ -24,6 +24,12 @@ var elasticsearchConnector = (function () {
         queryEditor,
         aggQueryEditor;
 
+    var toSafeTableauFieldName = function(unsafeName){
+        safeName = unsafeName ? unsafeName.replace(/[^\w]/g, "_") : "_null_";
+
+        return safeName;
+    };
+
     var addElasticsearchField = function (name, esType, format, hasLatLon) {
 
         if (_.isUndefined(elasticsearchTableauDataTypeMap[esType])) {
@@ -135,8 +141,9 @@ var elasticsearchConnector = (function () {
         console.log('[connector:getSchema] column names: ' + _.pluck(connectionData.fields, 'name').join(', '));
 
         var cols = _.map(connectionData.fields, function(field){
+
             return {
-                id: field.name,
+                id: toSafeTableauFieldName(field.name),
                 dataType: field.dataType
             };
         });
@@ -777,8 +784,10 @@ var elasticsearchConnector = (function () {
                 // about this noisily in its log files
                 _.each(connectionData.fields, function (field) {
 
+                    fieldName = toSafeTableauFieldName(field.name);
+
                     var fieldValue = getDeeplyNestedValue(hits[ii]._source, field.name);
-                    item[field.name] = _.isNull(fieldValue) || _.isUndefined(fieldValue) ? null : fieldValue;
+                    item[fieldName] = _.isNull(fieldValue) || _.isUndefined(fieldValue) ? null : fieldValue;
 
                 });
 
@@ -796,8 +805,10 @@ var elasticsearchConnector = (function () {
                     else{
                         val = item[field]
                     }
+                    
+                    fieldName = toSafeTableauFieldName(field);
 
-                    item[field] = moment.utc(val.replace(' +', '+')
+                    item[fieldName] = moment.utc(val.replace(' +', '+')
                         .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
                 });
                 _.each(connectionData.geoPointFields, function (field) {
@@ -826,8 +837,10 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
-                    item[field.name + '_latitude'] = lat;
-                    item[field.name + '_longitude'] = lon;
+                    fieldName = toSafeTableauFieldName(field.name);
+
+                    item[fieldName + '_latitude'] = lat;
+                    item[fieldName + '_longitude'] = lon;
                 });
                 item._id = hits[ii]._id;
                 item._sequence = totalCount + ii;
@@ -986,8 +999,11 @@ var elasticsearchConnector = (function () {
                     else {
                         bucketValue = bucket.key;
                     }
-                    console.log(field + " = " + bucketValue)
-                    currentRow[field] = bucketValue;
+                    console.log(field + " = " + bucketValue);
+
+                    fieldName = toSafeTableauFieldName(field);
+
+                    currentRow[fieldName] = bucketValue;
 
                     // Set the count field associated with this bucket (at the deepest level)
                     // TODO: Only set this when we are on a bucket agg at the deepest level
@@ -1006,32 +1022,32 @@ var elasticsearchConnector = (function () {
                     field.indexOf("metric_count_") == 0) {
 
                     console.log(field + " = " + agg[key].value)
-                    currentRow[field] = agg[key].value;
+                    currentRow[toSafeTableauFieldName(field)] = agg[key].value;
                 }
                 if (field.indexOf("metric_stats_") == 0) {
                     var fieldName = field.substring("metric_stats_".length)
                     console.log(field + " = " + JSON.stringify(agg[key]));
 
-                    currentRow["metric_sum_" + fieldName] = agg[key].sum;
-                    currentRow["metric_avg_" + fieldName] = agg[key].avg;
-                    currentRow["metric_min_" + fieldName] = agg[key].min;
-                    currentRow["metric_max_" + fieldName] = agg[key].max;
-                    currentRow["metric_count_" + fieldName] = agg[key].count;
+                    currentRow[toSafeTableauFieldName("metric_sum_" + fieldName)] = agg[key].sum;
+                    currentRow[toSafeTableauFieldName("metric_avg_" + fieldName)] = agg[key].avg;
+                    currentRow[toSafeTableauFieldName("metric_min_" + fieldName)] = agg[key].min;
+                    currentRow[toSafeTableauFieldName("metric_max_" + fieldName)] = agg[key].max;
+                    currentRow[toSafeTableauFieldName("metric_count_" + fieldName)] = agg[key].count;
                 }
                 if (field.indexOf("metric_extended_stats_") == 0) {
                     var fieldName = field.substring("metric_extended_stats_".length);
                     console.log(field + " = " + JSON.stringify(agg[key]));
 
-                    currentRow["metric_sum_" + fieldName] = agg[key].sum;
-                    currentRow["metric_avg_" + fieldName] = agg[key].avg;
-                    currentRow["metric_min_" + fieldName] = agg[key].min;
-                    currentRow["metric_max_" + fieldName] = agg[key].max;
-                    currentRow["metric_count_" + fieldName] = agg[key].count;
-                    currentRow["metric_sum_of_squares_" + fieldName] = agg[key].sum_of_squares;
-                    currentRow["metric_variance_" + fieldName] = agg[key].variance;
-                    currentRow["metric_std_deviation_" + fieldName] = agg[key].std_deviation;
-                    currentRow["metric_std_deviation_bounds_lower_" + fieldName] = agg[key].std_deviation_bounds.lower;
-                    currentRow["metric_std_deviation_bounds_upper_" + fieldName] = agg[key].std_deviation_bounds.upper;
+                    currentRow[toSafeTableauFieldName("metric_sum_" + fieldName)] = agg[key].sum;
+                    currentRow[toSafeTableauFieldName("metric_avg_" + fieldName)] = agg[key].avg;
+                    currentRow[toSafeTableauFieldName("metric_min_" + fieldName)] = agg[key].min;
+                    currentRow[toSafeTableauFieldName("metric_max_" + fieldName)] = agg[key].max;
+                    currentRow[toSafeTableauFieldName("metric_count_" + fieldName)] = agg[key].count;
+                    currentRow[toSafeTableauFieldName("metric_sum_of_squares_" + fieldName)] = agg[key].sum_of_squares;
+                    currentRow[toSafeTableauFieldName("metric_variance_" + fieldName)] = agg[key].variance;
+                    currentRow[toSafeTableauFieldName("metric_std_deviation_" + fieldName)] = agg[key].std_deviation;
+                    currentRow[toSafeTableauFieldName("metric_std_deviation_bounds_lower_" + fieldName)] = agg[key].std_deviation_bounds.lower;
+                    currentRow[toSafeTableauFieldName("metric_std_deviation_bounds_upper_" + fieldName)] = agg[key].std_deviation_bounds.upper;
                 }
             }
 
@@ -1303,7 +1319,8 @@ var elasticsearchConnector = (function () {
         getSearchResponse: getSearchResponse,
         openSearchScrollWindow: openSearchScrollWindow,
         getRemainingScrollResults: getRemainingScrollResults,
-        getAggregationResponse: getAggregationResponse
+        getAggregationResponse: getAggregationResponse,
+        toSafeTableauFieldName: toSafeTableauFieldName
     }
 
 })();
