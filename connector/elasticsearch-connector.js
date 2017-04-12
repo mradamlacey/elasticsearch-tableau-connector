@@ -833,7 +833,10 @@ var elasticsearchConnector = (function () {
                     }
                     
                     fieldName = toSafeTableauFieldName(field);
-
+                    
+                    // convert dateField to String before calling .replace() on it
+				    val = val + ''; 
+                    
                     item[fieldName] = moment.utc(val.replace(' +', '+')
                         .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
                 });
