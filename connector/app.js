@@ -92,12 +92,26 @@ var app = (function () {
 
                     _.each(aggData.buckets, function (bucket) {
 
+                        var ranges = [];
+                        var dateRanges = [];
+
+                        _.each(bucket.ranges, function(range){
+                             var vmRange = new self.aggregations.NewRange(range.type, range.from, range.to, range.relativeNumFrom, 
+                                                                          range.relativeNumTo, range.fromRelative, range.toRelative, range.fromType, range.toType);
+                            ranges.push(vmRange);
+                        });
+                        _.each(bucket.dateRanges, function(range){
+                             var vmRange = new self.aggregations.NewRange(range.type, range.from, range.to, range.relativeNumFrom, 
+                                                                          range.relativeNumTo, range.fromRelative, range.toRelative, range.fromType, range.toType);
+                            dateRanges.push(vmRange);
+                        });
+
                         var options = {
                             termSize: bucket.termSize,
                             dateHistogramType: bucket.dateHistogramType,
                             dateHistogramCustomInterval: bucket.dateHistogramCustomInterval,
-                            ranges: bucket.ranges,
-                            dateRanges: bucket.dateRanges
+                            ranges: ranges,
+                            dateRanges: dateRanges
                         };
 
                         var vmBucket = new self.aggregations.NewBucket(bucket.type, bucket.field, options);

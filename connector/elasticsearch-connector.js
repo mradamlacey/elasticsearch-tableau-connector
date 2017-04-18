@@ -217,7 +217,7 @@ var elasticsearchConnector = (function () {
                     tableauData.updateProperties(connectionData);
                 }
                 catch (err) {
-                    abortWithError(err)
+                    abort("Error in loading previously saved settings for the connector: " + err)
                     return
                 }
             }
