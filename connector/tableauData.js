@@ -25,7 +25,8 @@ var tableauData = (function () {
 
         tableau.connectionData = JSON.stringify(connectionData);
 
-        console.log('[TableauData] updateProperties - Connection data: ' + tableau.connectionData);
+        // console.log('[TableauData] updateProperties - Connection data: ' + tableau.connectionData);
+        console.log('[TableauData] updateProperties called');
         return connectionData;
     };
 
@@ -58,7 +59,8 @@ var tableauData = (function () {
 
         tableau.connectionData = JSON.stringify(connectionData);
 
-        console.log('[TableauData] updateAuthCredentials - Connection data: ' + tableau.connectionData);
+        // console.log('[TableauData] updateAuthCredentials - Connection data: ' + tableau.connectionData);
+        console.log('[TableauData] updateAuthCredentials called');
         return connectionData;
     }
 
