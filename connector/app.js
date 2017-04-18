@@ -1,6 +1,6 @@
 var app = (function () {
 
-    var AppViewModel = function() {
+    var AppViewModel = function () {
 
         var self = this;
 
@@ -19,6 +19,98 @@ var app = (function () {
 
         self.batchSize = ko.observable(10);
         self.limit = ko.observable(100);
+
+        self.pauseSubscriptions = ko.observable(false);
+
+        self.init = function(){
+            elasticsearchConnector.subscribeInitEvent(function(connectionData){
+
+                console.log("[app.init] Elasticsearch connector init fired!");
+                self.setWithTableauConnectionData(connectionData);
+            });
+        };
+
+        self.setWithTableauConnectionData = function (connectionData) {
+            if (connectionData == null) {
+                console.error("[app.setWithTableauConnectionData] [ERROR] - connectionData is null")
+                return;
+            }
+
+            var tableauToVMMap = {
+                "elasticsearchAuthenticate": "useBasicAuthentication",
+                "elasticsearchUsername": "username",
+                "elasticsearchPassword": "password",
+                "elasticsearchQuery": "searchCustomQuery",
+                "elasticsearchResultMode": "resultMode"
+            };
+
+            _.each(connectionData, function (val, key) {
+
+                // Assume if we stored a key with the same name as we have on this ViewModel that it's a KO observable
+
+                vmPropertyName = tableauToVMMap[key] ? tableauToVMMap[key] : key;
+
+                if (_.isFunction(self[vmPropertyName])){
+
+                    if (vmPropertyName == 'resultMode'){
+                        return;
+                    }
+
+                    console.log("[app] - updating observable [" + vmPropertyName + "]", val);
+                    self[vmPropertyName](val);
+                }
+
+            });
+
+            if (connectionData != null && connectionData.elasticsearchAggregationData != null) {
+
+                // Set Result mode and aggregation data separately
+                self.pauseSubscriptions(true);
+
+                console.log("Setting result mode to: " + connectionData.elasticsearchResultMode);
+                self.resultMode(connectionData.elasticsearchResultMode);
+
+                var aggData = connectionData.elasticsearchAggregationData;
+                self.aggregations.pauseSubscriptions(true);
+                console.log("Setting aggregations: ", aggData);
+
+                self.aggregations.useCustomQuery(aggData.useCustomQuery)
+                self.aggregations.aggregationFilter(aggData.filter)
+                self.aggregations.useAggFilter(aggData.useAggFilter)
+                self.aggregations.customQuery(aggData.customQuery)
+
+
+                self.aggregations.getUpdatedTypeFields(function (err, data) {
+                    if (err) {
+                        console.error("[app] Error in getting aggregation type fields")
+                    };
+
+                    _.each(aggData.metrics, function (metric) {
+                        var vmMetric = new self.aggregations.NewMetric(metric.type, metric.field);
+                        self.aggregations.metrics.push(vmMetric);
+                    });
+
+                    _.each(aggData.buckets, function (bucket) {
+
+                        var options = {
+                            termSize: bucket.termSize,
+                            dateHistogramType: bucket.dateHistogramType,
+                            dateHistogramCustomInterval: bucket.dateHistogramCustomInterval,
+                            ranges: bucket.ranges,
+                            dateRanges: bucket.dateRanges
+                        };
+
+                        var vmBucket = new self.aggregations.NewBucket(bucket.type, bucket.field, options);
+                        self.aggregations.buckets.push(vmBucket);
+                    });
+                });
+
+                self.aggregations.pauseSubscriptions(false);
+                self.pauseSubscriptions(false);
+            }
+
+            tableauData.updateProperties(vm.getTableauConnectionData());
+        }
 
         self.elasticsearchIndexSource = function (something, cb) {
 
@@ -69,7 +161,7 @@ var app = (function () {
 
         self.errorMessage = ko.observable();
 
-        self.isErrorVisible = ko.computed(function(){
+        self.isErrorVisible = ko.computed(function () {
             return !self.errorMessage();
         });
 
@@ -77,7 +169,7 @@ var app = (function () {
         self.aggregations = aggregations;
 
         self.validation = ko.observable({});
-        
+
         self.getTableauConnectionData = function () {
 
             var connectionData = {
@@ -88,6 +180,7 @@ var app = (function () {
                 elasticsearchPassword: self.password(),
                 elasticsearchIndex: self.elasticsearchIndex(),
                 elasticsearchType: self.elasticsearchType(),
+                useCustomQuery: self.useCustomQuery(),
                 elasticsearchQuery: self.searchCustomQuery(),
                 elasticsearchResultMode: self.resultMode(),
                 elasticsearchAggregationData: aggregations.getAggregationData(),
@@ -120,20 +213,20 @@ var app = (function () {
 
             self.getElasticsearchFieldData(function (err, esFieldData) {
 
-                if(err){
+                if (err) {
                     self.isPreviewVisible(false);
                     self.isPreviewDataLoading(false);
                     return toastr.error(err);
                 }
 
-                _.each(esFieldData.fields, function(field){
+                _.each(esFieldData.fields, function (field) {
                     self.previewFields.push(elasticsearchConnector.toSafeTableauFieldName(field.name));
                 });
 
                 tableauData.updateProperties(esFieldData);
 
                 if (self.resultMode() == "search") {
-                    elasticsearchConnector.getSearchResponse(false, null, function(err, result){
+                    elasticsearchConnector.getSearchResponse(false, null, function (err, result) {
                         if (err) {
                             self.isPreviewVisible(false);
                             self.isPreviewDataLoading(false);
@@ -146,11 +239,11 @@ var app = (function () {
                         self.isPreviewDataLoading(false);
                     });
                 }
-                
-                if(self.resultMode() == "aggregation"){
 
-                    elasticsearchConnector.getAggregationResponse(false, null, function(err, result){
-                        
+                if (self.resultMode() == "aggregation") {
+
+                    elasticsearchConnector.getAggregationResponse(false, null, function (err, result) {
+
                         if (err) {
                             self.isPreviewVisible(false);
                             self.isPreviewDataLoading(false);
@@ -169,11 +262,11 @@ var app = (function () {
 
         };
 
-        self.submit = function(){
+        self.submit = function () {
 
-            self.getElasticsearchFieldData(function(err, esFieldData){
+            self.getElasticsearchFieldData(function (err, esFieldData) {
 
-                if(err){
+                if (err) {
                     tableau.submit();
                     return toastr.error(err);
                 }
@@ -183,10 +276,10 @@ var app = (function () {
                 console.log("[App] Submitting tableau interactive phase data");
                 tableau.submit();
             });
-        
+
         }
 
-        self.abort = function(errorMessage, kill) {
+        self.abort = function (errorMessage, kill) {
 
             self.errorMessage(errorMessage);
 
@@ -339,12 +432,12 @@ var app = (function () {
             });
         };
 
-     self.getElasticsearchFieldData = function(cb){
+        self.getElasticsearchFieldData = function (cb) {
             var messages = [];
 
-            if(self.resultMode() == "aggregation"){
+            if (self.resultMode() == "aggregation") {
                 var aggData = aggregations.getAggregationData();
-                tableauData.updateProperties({elasticsearchAggregationData: aggData});
+                tableauData.updateProperties({ elasticsearchAggregationData: aggData });
 
                 var aggValidation = self.aggregations.validate();
                 messages = aggValidation.messages;
@@ -352,12 +445,12 @@ var app = (function () {
 
             self.validate();
 
-            if((self.validation() && self.validation().messages.length > 0) ||
-                messages.length > 0){
+            if ((self.validation() && self.validation().messages.length > 0) ||
+                messages.length > 0) {
 
                 messages = messages.concat(self.validation().messages);
 
-                if(cb) cb(messages.join("<br />"));
+                if (cb) cb(messages.join("<br />"));
                 return;
             }
 
@@ -366,23 +459,23 @@ var app = (function () {
             elasticsearchConnector.getElasticsearchConnectionFieldInfo(tableauData.getUnwrapped(), function (err, esFieldData) {
                 if (err) {
                     console.log("[App] - error returned from getElasticsearchConnectionFieldInfo");
-                    if(cb) cb(err);
+                    if (cb) cb(err);
                     return;
                 }
 
-                if(cb){
+                if (cb) {
                     cb(null, esFieldData)
                 }
             });
         };
 
-        self.validate = function(){
+        self.validate = function () {
 
             var validation = {
                 messages: []
             };
 
-            if(self.useBasicAuthentication()){
+            if (self.useBasicAuthentication()) {
                 if (!self.username()) {
                     validation.messages.push("Username is required");
                     validation.username = true
@@ -400,22 +493,22 @@ var app = (function () {
                 }
             }
 
-            if(!self.elasticsearchUrl()){
+            if (!self.elasticsearchUrl()) {
                 validation.messages.push("Elasticsearch URL is required");
                 validation.elasticsearchUrl = true
             }
-            else{
-                var isValid =isValidUrl(self.elasticsearchUrl());
+            else {
+                var isValid = isValidUrl(self.elasticsearchUrl());
 
-                if(!isValid) validation.messages.push("Elasticsearch URL is not a valid URL");
+                if (!isValid) validation.messages.push("Elasticsearch URL is not a valid URL");
                 validation.elasticsearchUrl = !isValid;
             }
 
-            if(!self.elasticsearchIndex()){
+            if (!self.elasticsearchIndex()) {
                 validation.messages.push("Elasticsearch Index is required");
                 validation.elasticsearchIndex = true
             }
-            else{
+            else {
                 validation.elasticsearchIndex = false;
             }
 
@@ -427,12 +520,12 @@ var app = (function () {
                 validation.elasticsearchType = false;
             }
 
-            if(self.useCustomQuery()){
-                if(!self.searchCustomQuery()){
+            if (self.useCustomQuery()) {
+                if (!self.searchCustomQuery()) {
                     validation.messages.push("Custom query is required");
                     validation.searchCustomQuery = true;
                 }
-                else{
+                else {
                     validation.searchCustomQuery = false;
                 }
             }
@@ -442,7 +535,7 @@ var app = (function () {
 
     };
 
-    var isValidUrl = function(str) {
+    var isValidUrl = function (str) {
         var pattern = new RegExp('^(https?:\/\/)?' + // protocol
             '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\.)+[a-z]{2,}|' + // domain name
             '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
@@ -451,21 +544,21 @@ var app = (function () {
             '(\\#[-a-z\\d_]*)?$', 'i'); // fragment locater
         if (!pattern.test(str)) {
             return false;
-        } 
+        }
         else {
             return true;
         }
     }
 
-    var _getAuthCredentials = function(connectionData){
+    var _getAuthCredentials = function (connectionData) {
 
-        if(connectionData.useSyncClientWorkaround){
+        if (connectionData.useSyncClientWorkaround) {
             return {
                 username: connectionData.elasticsearchUsername,
                 password: connectionData.elasticsearchPassword
             };
         }
-        else{
+        else {
             return {
                 username: tableau.username,
                 password: tableau.password
@@ -473,8 +566,8 @@ var app = (function () {
         }
     };
 
-    var _beforeSendAddAuthHeader = function(xhr, connectionData){
-        
+    var _beforeSendAddAuthHeader = function (xhr, connectionData) {
+
         var creds = _getAuthCredentials(connectionData);
 
         if (connectionData.elasticsearchAuthenticate && creds.username) {
@@ -487,9 +580,9 @@ var app = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Subscribe to changes in the VM and keep the tableau properties in sync
     ///////////////////////////////////////////////////////////////////////////////////////////
-    vm.useBasicAuthentication.subscribe(function(newValue){
+    vm.useBasicAuthentication.subscribe(function (newValue) {
 
-        if(newValue === false){
+        if (newValue === false) {
             vm.username("");
             vm.password("");
             vm.useSyncClientWorkaround(false);
@@ -498,19 +591,19 @@ var app = (function () {
         tableauData.updateAuthCredentials(vm.useBasicAuthentication(), vm.useSyncClientWorkaround(), vm.username(), vm.password());
     });
 
-    vm.username.subscribe(function(newValue){
+    vm.username.subscribe(function (newValue) {
         tableauData.updateAuthCredentials(vm.useBasicAuthentication(), vm.useSyncClientWorkaround(), vm.username(), vm.password());
     });
 
-    vm.password.subscribe(function(newValue){
+    vm.password.subscribe(function (newValue) {
         tableauData.updateAuthCredentials(vm.useBasicAuthentication(), vm.useSyncClientWorkaround(), vm.username(), vm.password());
     });
 
-    vm.useSyncClientWorkaround.subscribe(function(newValue){
+    vm.useSyncClientWorkaround.subscribe(function (newValue) {
         tableauData.updateAuthCredentials(vm.useBasicAuthentication(), vm.useSyncClientWorkaround(), vm.username(), vm.password());
     });
 
-    vm.elasticsearchUrl.subscribe(function(newValue){
+    vm.elasticsearchUrl.subscribe(function (newValue) {
 
         vm.elasticsearchIndex("");
         vm.elasticsearchType("");
@@ -522,8 +615,8 @@ var app = (function () {
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-    vm.elasticsearchIndex.subscribe(function(newValue){
-        
+    vm.elasticsearchIndex.subscribe(function (newValue) {
+
         vm.elasticsearchType("");
 
         vm.previewFields.removeAll();
@@ -533,7 +626,7 @@ var app = (function () {
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-    vm.elasticsearchType.subscribe(function(newValue){
+    vm.elasticsearchType.subscribe(function (newValue) {
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
 
@@ -541,35 +634,49 @@ var app = (function () {
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-    vm.searchCustomQuery.subscribe(function(newValue){
+    vm.useCustomQuery.subscribe(function(newValue){
+        if( newValue == false){
+            console.log("Setting use custom query to false...")
+            vm.searchCustomQuery();
+        }
+        else{
+            tableauData.updateProperties(vm.getTableauConnectionData());
+        }  
+    });
+
+    vm.searchCustomQuery.subscribe(function (newValue) {
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
 
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-    vm.batchSize.subscribe(function(newValue){
+    vm.batchSize.subscribe(function (newValue) {
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-    vm.limit.subscribe(function(newValue){
+    vm.limit.subscribe(function (newValue) {
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-    vm.resultMode.subscribe(function(newValue){
+    vm.resultMode.subscribe(function (newValue) {
+        if(vm.pauseSubscriptions()){
+            return;
+        }
+
         console.log("[App] resultMode changed: " + newValue);
 
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
         vm.isPreviewVisible(false);
-        
+
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-//    vm.aggregations.getAggregationData().subscribe(function(newValue){
-//        console.log("[App] aggregations changed: " + newValue);
-//    });
+    //    vm.aggregations.getAggregationData().subscribe(function(newValue){
+    //        console.log("[App] aggregations changed: " + newValue);
+    //    });
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -578,9 +685,10 @@ var app = (function () {
 
     toastr.options.positionClass = "toast-top-center";
     toastr.options.preventDuplicates = true;
-    
+
     return vm;
 
 })();
 
 console.log("[App]", app);
+app.init();

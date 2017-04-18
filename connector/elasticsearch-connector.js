@@ -150,6 +150,8 @@ var elasticsearchConnector = (function () {
 
         var tableInfo = {
             id : connectionData.connectionName || "default",
+            alias: connectionData.connectionName || "default", 
+            description: "",
             columns : cols
         };
 
@@ -203,10 +205,34 @@ var elasticsearchConnector = (function () {
         console.log('[connector.init] fired');
 
         if (tableau.phase == tableau.phaseEnum.interactivePhase) {
-            $('.no-tableau').css('display', 'none');
-            $('.tableau').css('display', 'block');
+            console.log('[connector.init] interactive phase...');
 
-            initUIControls();
+            var connectionData = tableau.connectionData;
+
+            if (connectionData) {
+
+                try {
+                    connectionData = JSON.parse(connectionData);
+                    console.log("[connector:init] Previously saved connection data, updating: ", connectionData)
+                    tableauData.updateProperties(connectionData);
+                }
+                catch (err) {
+                    abortWithError(err)
+                    return
+                }
+            }
+            else {
+                connectionData = {};
+            }
+
+            if (tableau.phase == tableau.phaseEnum.interactivePhase) {
+                $('.no-tableau').css('display', 'none');
+                $('.tableau').css('display', 'block');
+
+                initUIControls();
+            }
+
+            init(connectionData);
         }
 
         cb();
@@ -1311,6 +1337,13 @@ var elasticsearchConnector = (function () {
         aggregationData = data;
     };
 
+    var init = ko.observable();
+    var subscribeInitEvent = function(cb){
+        if (_.isFunction(cb)){
+            init.subscribe(cb);
+        }
+    }
+
     return {
         abort: abort,
         updateAggregationData: updateAggregationData,
@@ -1320,7 +1353,8 @@ var elasticsearchConnector = (function () {
         openSearchScrollWindow: openSearchScrollWindow,
         getRemainingScrollResults: getRemainingScrollResults,
         getAggregationResponse: getAggregationResponse,
-        toSafeTableauFieldName: toSafeTableauFieldName
+        toSafeTableauFieldName: toSafeTableauFieldName,
+        subscribeInitEvent: subscribeInitEvent
     }
 
 })();
