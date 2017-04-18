@@ -174,18 +174,14 @@ var app = (function () {
             self.getElasticsearchFieldData(function(err, esFieldData){
 
                 if(err){
+                    tableau.submit();
                     return toastr.error(err);
                 }
 
                 tableauData.updateProperties(esFieldData);
 
-                if (tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
-                    console.log("[App] Submitting tableau interactive phase data");
-                    tableau.submit();
-                }
-                else {
-                    self.abort('Invalid phase: ' + tableau.phase + ' aborting', true);
-                }
+                console.log("[App] Submitting tableau interactive phase data");
+                tableau.submit();
             });
         
         }
