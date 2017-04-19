@@ -824,6 +824,10 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
+                    if( !_.isString(item[field])){
+                        return;
+                    }
+
                     val = null;
                     if(_.isArray(item[field])){
                         val = item[field][0]
