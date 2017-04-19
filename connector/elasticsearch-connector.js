@@ -149,8 +149,8 @@ var elasticsearchConnector = (function () {
         console.log('[connector:getSchema] column names: ' + _.pluck(cols, 'id').join(', '));
 
         var tableInfo = {
-            id : connectionData.connectionName || "default",
-            alias: connectionData.connectionName || "default", 
+            id : toSafeTableauFieldName(connectionData.connectionName) || "default", 
+            alias: toSafeTableauFieldName(connectionData.connectionName) || "default", 
             description: "",
             columns : cols
         };
