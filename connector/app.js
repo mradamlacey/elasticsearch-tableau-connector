@@ -26,11 +26,25 @@ var app = (function () {
 
         self.pauseSubscriptions = ko.observable(false);
 
+        self.tableauInteractive = ko.observable(false);
+        self.loaded = ko.observable(false);
+
         self.init = function(){
+
             elasticsearchConnector.subscribeInitEvent(function(connectionData){
+
+                if (tableau.phase == tableau.phaseEnum.interactivePhase) {
+                    console.log("[app] Connector UI called from Tableau WDC interactive mode, phase: ", tableau.phase)
+                    self.tableauInteractive(true);
+                }
+                else {
+                    console.log("[app] Connector UI called in standalone mode")
+                }
 
                 console.log("[app.init] Elasticsearch connector init fired!");
                 self.setWithTableauConnectionData(connectionData);
+
+                self.loaded(true);
             });
         };
 
@@ -69,13 +83,12 @@ var app = (function () {
             if(connectionData != null){
                  vm.getElasticsearchFieldData(function(err, fieldData){
                      if(err){
-                         console.error("[app] Loading state for incremental refresh column");
                          return;
                      }
                       updateIncrementalRefreshColumns(err, fieldData);
 
                       vm.incrementalRefreshColumn(connectionData.incrementalRefreshColumn);
-                 });
+                 }, true);
             }
 
             if (connectionData != null && connectionData.elasticsearchAggregationData != null) {
@@ -95,11 +108,12 @@ var app = (function () {
                 self.aggregations.useAggFilter(aggData.useAggFilter)
                 self.aggregations.customQuery(aggData.customQuery)
 
-
                 self.aggregations.getUpdatedTypeFields(function (err, data) {
                     if (err) {
-                        console.error("[app] Error in getting aggregation type fields")
-                    };
+                        self.aggregations.pauseSubscriptions(false);
+                        self.pauseSubscriptions(false);
+                        return;
+                    }
 
                     _.each(aggData.metrics, function (metric) {
                         var vmMetric = new self.aggregations.NewMetric(metric.type, metric.field);
@@ -296,10 +310,14 @@ var app = (function () {
 
         self.submit = function () {
 
+            if(!self.tableauInteractive()){
+                var err = "[app] [ERROR] Not in Tableau WDC interactive mode, returning...";
+                return toastr.error(err);
+            }
+
             self.getElasticsearchFieldData(function (err, esFieldData) {
 
                 if (err) {
-                    tableau.submit();
                     return toastr.error(err);
                 }
 
@@ -464,31 +482,52 @@ var app = (function () {
             });
         };
 
-        self.getElasticsearchFieldData = function (cb) {
+        self.getElasticsearchFieldData = function (cb, initialLoad) {
             var messages = [];
+
+            var connectionData = tableauData.getUnwrapped();
+
+            if (initialLoad === true) {
+                if(connectionData == null){
+                    return cb("Connection Data not provided for Elasticsearch", null);
+                }
+                if (!connectionData.elasticsearchUrl || !connectionData.elasticsearchIndex || !connectionData.elasticsearchType) {
+                    return cb("Connection Data not provided for Elasticsearch", null);
+                }
+            }
 
             if (self.resultMode() == "aggregation") {
                 var aggData = aggregations.getAggregationData();
                 tableauData.updateProperties({ elasticsearchAggregationData: aggData });
 
-                var aggValidation = self.aggregations.validate();
-                messages = aggValidation.messages;
+                if (initialLoad === true) {
+                    // Skip validation...
+                }
+                else {
+                    var aggValidation = self.aggregations.validate();
+                    messages = aggValidation.messages;
+                }
             }
 
-            self.validate();
+            if (initialLoad === true) {
+                // Skip validation...
+            }
+            else {
+                self.validate();
 
-            if ((self.validation() && self.validation().messages.length > 0) ||
-                messages.length > 0) {
+                if ((self.validation() && self.validation().messages.length > 0) ||
+                    messages.length > 0) {
 
-                messages = messages.concat(self.validation().messages);
+                    messages = messages.concat(self.validation().messages);
 
-                if (cb) cb(messages.join("<br />"));
-                return;
+                    if (cb) cb(messages.join("<br />"));
+                    return;
+                }
             }
 
             // We have all the configuration filled for what data we want to retrieve from Elasticsearch
             // Go retrieve the actual fields and data types in order to update the Tableau connection data
-            elasticsearchConnector.getElasticsearchConnectionFieldInfo(tableauData.getUnwrapped(), function (err, esFieldData) {
+            elasticsearchConnector.getElasticsearchConnectionFieldInfo(connectionData, function (err, esFieldData) {
                 if (err) {
                     console.log("[App] - error returned from getElasticsearchConnectionFieldInfo");
                     if (cb) cb(err);

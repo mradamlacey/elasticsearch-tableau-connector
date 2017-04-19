@@ -43,17 +43,8 @@
             </div>
         </div>
 
-        <div class="row no-tableau">
+        <div class="row" data-bind="visible: loaded" style="display: none;">
             <div class="col-md-10 col-md-offset-1">
-                <div class="alert alert-info">
-                    <p>Please open this URL from within Tableau</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="row tableau">
-            <div class="col-md-10 col-md-offset-1">
-
 
                 <div class="form-group">
                     <label for="inputConnectionName">Connection Name</label>
@@ -440,7 +431,7 @@
                     Preview
                 </button>
 
-                <button class="btn btn-primary" data-bind="click: submit">
+                <button class="btn btn-primary" data-bind="click: submit, visible: tableauInteractive">
                     Submit
                 </button>
 
