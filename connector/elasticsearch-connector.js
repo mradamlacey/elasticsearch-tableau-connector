@@ -155,6 +155,10 @@ var elasticsearchConnector = (function () {
             columns : cols
         };
 
+        if(connectionData.useIncrementalRefresh){
+            tableInfo.incrementColumnId = connectionData.incrementalRefreshColumn;
+        }
+
         schemaCallback([tableInfo]);
     };
 
@@ -645,6 +649,50 @@ var elasticsearchConnector = (function () {
             requestData = {
                 query: { match_all: {} }
             };
+        }
+
+        if(connectionData.useIncrementalRefresh){
+
+            sortEntry = {};
+            sortEntry[connectionData.incrementalRefreshColumn] = {"order" : "asc", "missing" : "_first"};
+
+            requestData.sort = [ sortEntry ];
+
+            if (table && table.incrementValue) {
+
+                var isDateField = _.find(connectionData.dateFields, function(field){
+                    if (field == connectionData.incrementalRefreshColumn){
+                        return true;
+                    }
+
+                    return false;
+                });
+                var incrementValue = "";
+                if(_.isArray(table.incrementValue)){
+                    incrementValue = table.incrementValue.length > 0 ? table.incrementValue[0] : "";
+                }else{
+                    incrementValue = table.incrementValue;
+                }
+
+                if(isDateField){
+                    incrementValue = moment.utc(incrementValue.replace(' +', '+')
+                        .replace(' -', '-')).format("YYYY-MM-DDTHH:mm:ss");
+                }else{
+                    incrementValue = table.incrementValue;
+                }
+                var filter = { range: {} };
+                filter.range[connectionData.incrementalRefreshColumn] = { "gt": incrementValue };
+
+                if (requestData.query == null) {
+                    requestData.query = { bool: {} };
+                }
+                if (requestData.query.bool == null) {
+                    requestData.query = { bool: {} };
+                }
+
+                requestData.query.bool.filter = [filter];
+            }
+
         }
 
         requestData.size = connectionData.batchSize;
