@@ -17,6 +17,10 @@ var app = (function () {
         self.useCustomQuery = ko.observable(false);
         self.searchCustomQuery = ko.observable();
 
+        self.useIncrementalRefresh = ko.observable(false);
+        self.incrementalRefreshColumns = ko.observableArray([]);
+        self.incrementalRefreshColumn = ko.observable();
+
         self.batchSize = ko.observable(10);
         self.limit = ko.observable(100);
 
@@ -61,6 +65,18 @@ var app = (function () {
                 }
 
             });
+
+            if(connectionData != null){
+                 vm.getElasticsearchFieldData(function(err, fieldData){
+                     if(err){
+                         console.error("[app] Loading state for incremental refresh column");
+                         return;
+                     }
+                      updateIncrementalRefreshColumns(err, fieldData);
+
+                      vm.incrementalRefreshColumn(connectionData.incrementalRefreshColumn);
+                 });
+            }
 
             if (connectionData != null && connectionData.elasticsearchAggregationData != null) {
 
@@ -199,6 +215,8 @@ var app = (function () {
                 elasticsearchResultMode: self.resultMode(),
                 elasticsearchAggregationData: aggregations.getAggregationData(),
                 useSyncClientWorkaround: self.useSyncClientWorkaround(),
+                useIncrementalRefresh: self.useIncrementalRefresh(),
+                incrementalRefreshColumn: self.incrementalRefreshColumn(),
                 batchSize: self.batchSize(),
                 limit: self.limit()
             };
@@ -617,6 +635,33 @@ var app = (function () {
         tableauData.updateAuthCredentials(vm.useBasicAuthentication(), vm.useSyncClientWorkaround(), vm.username(), vm.password());
     });
 
+    var updateIncrementalRefreshColumns = function(err, fieldData){
+
+        var incrementalRefreshColumn = vm.incrementalRefreshColumn();
+
+        if(err){
+            console.error("[app] Unable to refresh incremental refresh fields");
+            return;
+        }
+
+        console.log("[app] Getting elasticsearch incremental refresh fields...", fieldData);
+
+        vm.incrementalRefreshColumns.removeAll();
+        _.each(fieldData.fields, function(field){
+            if(field.name == "_id" || field.name == "_sequence"){
+                return;
+            }
+            
+            vm.incrementalRefreshColumns.push(field);
+        });
+
+        console.log("[app] Resetting incremental refresh column value to: " + incrementalRefreshColumn);
+
+        if(incrementalRefreshColumn){
+            vm.incrementalRefreshColumn(incrementalRefreshColumn);
+        }
+    };
+
     vm.elasticsearchUrl.subscribe(function (newValue) {
 
         vm.elasticsearchIndex("");
@@ -627,6 +672,8 @@ var app = (function () {
 
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
+
+        vm.getElasticsearchFieldData(updateIncrementalRefreshColumns);
     });
 
     vm.elasticsearchIndex.subscribe(function (newValue) {
@@ -638,6 +685,8 @@ var app = (function () {
 
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
+
+        vm.getElasticsearchFieldData(updateIncrementalRefreshColumns);
     });
 
     vm.elasticsearchType.subscribe(function (newValue) {
@@ -646,6 +695,8 @@ var app = (function () {
 
         vm.aggregations.clear();
         tableauData.updateProperties(vm.getTableauConnectionData());
+
+        vm.getElasticsearchFieldData(updateIncrementalRefreshColumns);
     });
 
     vm.useCustomQuery.subscribe(function(newValue){
@@ -662,6 +713,14 @@ var app = (function () {
         vm.previewFields.removeAll();
         vm.previewData.removeAll();
 
+        tableauData.updateProperties(vm.getTableauConnectionData());
+    });
+
+    vm.useIncrementalRefresh.subscribe(function (newValue) {
+        tableauData.updateProperties(vm.getTableauConnectionData());
+    });
+
+     vm.incrementalRefreshColumn.subscribe(function (newValue) {
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
