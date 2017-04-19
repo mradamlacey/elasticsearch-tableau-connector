@@ -25,7 +25,7 @@ var elasticsearchConnector = (function () {
         aggQueryEditor;
 
     var toSafeTableauFieldName = function(unsafeName){
-        safeName = unsafeName ? unsafeName.replace(/[^\w]/g, "_") : "_null_";
+        safeName = unsafeName ? unsafeName.replace(/[^\w]/g, "_") : "";
 
         return safeName;
     };
