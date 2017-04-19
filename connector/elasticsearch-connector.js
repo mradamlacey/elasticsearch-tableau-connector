@@ -230,9 +230,6 @@ var elasticsearchConnector = (function () {
             }
 
             if (tableau.phase == tableau.phaseEnum.interactivePhase) {
-                $('.no-tableau').css('display', 'none');
-                $('.tableau').css('display', 'block');
-
                 initUIControls();
             }
 
@@ -243,18 +240,6 @@ var elasticsearchConnector = (function () {
     }
 
     myConnector.shutdown = function (shutdownCallback) {
-        endTime = moment();
-        var runTime = endTime.diff(startTime) / 1000;
-        $('#myPleaseWait').modal('hide');
-
-        $('#divError').css('display', 'none');
-        $('#divMessage').css('display', 'block');
-        $('#messageText').text(totalCount + ' total rows retrieved, in: ' + runTime + ' (s)');
-
-        $('html, body').animate({
-            scrollTop: $("#divMessage").offset().top
-        }, 500);
-
         console.log('[connector:shutdown] callback...');
         shutdownCallback();
     };
@@ -268,6 +253,18 @@ var elasticsearchConnector = (function () {
     $(document).ready(function () {
 
         console.log('[$.document.ready] fired...');
+
+        setTimeout(function(){
+            console.log("tableau platformBuildNumber...:",tableau, tableau.platformBuildNumber);
+            if (tableau.phase == tableau.phaseEnum.interactivePhase) {
+                console.log("[elasticsearchConnector] Connector UI called from Tableau WDC interactive mode, phase: ", tableau.phase)
+            }
+            else {
+                console.log("[elasticsearchConnector] Connector UI called in standalone mode");
+                initUIControls();
+                init({});
+            }
+        }, 2500);
     });
 
     var initUIControls = function () {
@@ -288,10 +285,6 @@ var elasticsearchConnector = (function () {
             content: "Use Query String syntax to define a filter to apply to the data that is aggregated.  Refer to: <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax' target='_blank'>Query String Syntax</a>"           
         });
 
-        $("#submitButton").click(function (e) { // This event fires when a button is clicked            
-            console.log("[Elasticsearch Connector] - Submit - noop")
-        });
-
     };
 
     var getElasticsearchConnectionFieldInfo = function (connectionData, cb) {
@@ -305,8 +298,6 @@ var elasticsearchConnector = (function () {
         switch (connectionData.elasticsearchResultMode) {
             case "search":
                 // Retrieve the Elasticsearch mapping before we call tableau submit
-                // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
-                // asynchronously
                 getElasticsearchTypeMapping(connectionData, function (err, data, connectionData) {
 
                     if (err) {
