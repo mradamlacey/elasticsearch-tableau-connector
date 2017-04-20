@@ -14,6 +14,10 @@ that it was executed.
 The connector works by retrieving 'pages' of data from Elasticsearch up to either the limit specified, or up to the total
 number of hits.  The user can override the batch size to retrieve more records per page if desired.
 
+# Demo
+
+(Live Demo of Connector)[https://mradamlacey.github.io/elasticsearch-tableau-connector/elasticsearch-connector.html]
+
 # Compatibility
 
 The 2.0 release (in the `release-2.0` branch and current development version in `master`) supports **Tableau 10.0 or later**.
@@ -25,8 +29,11 @@ The 1.0 release (in the `release-1.0` branch) supports **Tableau 9.1.6 or later,
 - Fields with `array` values will have the value from the first element used, otherwise the entire array will be passed as a value (which probably will not display in Tableau
   correctly)
 - Extremely large datasets can cause issues and crash Tableau as all available memory is consumed
+- 'Incremental Refresh' is only supported in 'Search Result' mode
 
 # Configuration
+
+There is some configuration needed in Elasticsearch for the connector to work:
 
 ## Enable `CORS`
 
@@ -50,7 +57,7 @@ For more detailed information on Elasticsearch configuration options refer to:
 ## Enabling `CORS` with a proxy
 
 As an alternative to enabling `CORS` through the Elasticsearch configuration file, you can setup a proxy in front of Elasticsearch that
-will set the property HTTP response headers.
+will set the proper HTTP response headers.
 
 As an example, in AWS - here's a link that describes how to setup an API gateway that sends CORS headers: http://enable-cors.org/server_awsapigateway.html
 
@@ -146,6 +153,12 @@ To uninstall the service:
 npm run-script uninstall-service
 ```
 
+## Loading the Connector UI outside Tableau
+
+The connector UI can be loaded from a web browser (outside of Tableau Desktop).  Simply enter the URL of the connector (defaults to [http://localhost:3000/elasticsearch-connector.html] if running the project locally).
+
+The 'Submit' button will not be displayed, but you can still use the 'Preview' feature of the connector. 
+
 ## Importing into Tableau Server
 
 Execute the build for this project from the command line:
@@ -212,6 +225,8 @@ The Elasticsearch connector UI includes the following fields:
 | Result Mode | Option | Option to retrieve search results from Elasticsearch (Search Result Mode) or from a query using aggregation (Aggregation Mode) |
 | Use custom query? | Boolean | If true, indicates if the extract should use a custom query against Elasticsearch in search result mode, if false extract will be a 'match all' |
 | Query | String | If `Use custom query?` is true, this will be the JSON request payload sent to Elasticsearch in search result mode.  `from`, and `size` will be overwritten if supplied. Refer to [Elasticsearch Query DSL](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html) for a reference on writing a query |
+| Use Incremental Refresh | Boolean | If checked, then Tableau can fetch data using incremental refresh mode |
+| Incremental Refresh Column | String | Name of the column to use for incremental refreshes.  Should be a date, time or integer column | 
 | Batch size of per request to Elasticsearch | Integer | Number of rows to retrieve at once, defaults to 10, should probably be 1000+ |
 | Total limit on numnber of rows to sync | Integer | Limit of rows to include in extract, defaults to 100, but generally should be left blank to indicate that all matching rows should be included |
 | Use custom query? (aggregation mode) | Boolean | If true, indicates the data extract should use a custom query that includes an aggregation request |
@@ -312,6 +327,20 @@ Will create the following fields:
 For `geo_point` fields in Elasticsearch, this connector will create two separate Tableau fields by parsing the `lat, lon` value:
 - Latitude - field will be named `<field-name>_latitude` - float type
 - Longitude - field will be named `<field-name>_longitude` - float type
+
+# Incremental Refresh
+
+The connector supports Tableau's incremental refresh feature in 'Search Result' mode.  This can be used to extract large datasets from
+Elasticsearch that can be incrementally imported into Tableau.
+
+Your Elasticsearch type should have a date, time or integer field that is used to query for incremental data.  The last value for this
+column is stored and used on subsequent extracts as the starting value.  E.g., if the last value seen for a field `@timestamp` was `1/1/2000 00:00:00`
+then the next time an incremental extract is processed, the query to Elasticsearch will filter on the `@timestamp` field for values
+greater than `1/1/2000 00:00:00`.
+
+Generally the value should be unique and increment for new data added to Elasticsearch (why a timestamp or auto incrementing sequence number are good choices).
+
+For more information refer to: [Tableau Online Help](https://onlinehelp.tableau.com/current/pro/desktop/en-us/qs_datasources_connections.html)
 
 # Sponsorship
 
