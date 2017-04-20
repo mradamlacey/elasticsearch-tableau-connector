@@ -155,7 +155,7 @@ npm run-script uninstall-service
 
 ## Loading the Connector UI outside Tableau
 
-The connector UI can be loaded from a web browser (outside of Tableau Desktop).  Simply enter the URL of the connector (defaults to [http://localhost:3000/elasticsearch-connector.html] if running the project locally).
+The connector UI can be loaded from a web browser (outside of Tableau Desktop).  Simply enter the URL of the connector (defaults to [http://localhost:3000/elasticsearch-connector.html](http://localhost:3000/elasticsearch-connector.html) if running the project locally).
 
 The 'Submit' button will not be displayed, but you can still use the 'Preview' feature of the connector. 
 
@@ -228,9 +228,11 @@ The Elasticsearch connector UI includes the following fields:
 | Use Incremental Refresh | Boolean | If checked, then Tableau can fetch data using incremental refresh mode |
 | Incremental Refresh Column | String | Name of the column to use for incremental refreshes.  Should be a date, time or integer column | 
 | Batch size of per request to Elasticsearch | Integer | Number of rows to retrieve at once, defaults to 10, should probably be 1000+ |
-| Total limit on numnber of rows to sync | Integer | Limit of rows to include in extract, defaults to 100, but generally should be left blank to indicate that all matching rows should be included |
+| Total limit on number of rows to sync | Integer | Limit of rows to include in extract, defaults to 100, but generally should be left blank to indicate that all matching rows should be included |
 | Use custom query? (aggregation mode) | Boolean | If true, indicates the data extract should use a custom query that includes an aggregation request |
-| Custom query | String | JSON payload sent in the request for Elasticsearch, must include `aggregations` and `aggs` for Terms, Range, Date Range or Date Histogram |
+| Custom query | String | JSON payload sent in the request for Elasticsearch, must include `aggregations` or `aggs` element for Terms, Range, Date Range or Date Histogram |
+| Filter data included in aggregations | Boolean | If checked, then you can enter a filter that will be used against data used in an aggregation request |
+| Filter | String | Uses [Lucene Query String Syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax) to define a filter applied against aggregation data |
 | Metrics | Metric | One or more metrics to calculate for the aggregation results.  Valid options are Count, Min, Max, Sum, Average, Stats, and Extended Stats. Refer to 'Metrics' section |
 | Buckets | Bucket | Bucket to aggregate results to and calculate metrics for, or multiple levels of child buckets.  See buckets for more information |
 
@@ -338,9 +340,12 @@ column is stored and used on subsequent extracts as the starting value.  E.g., i
 then the next time an incremental extract is processed, the query to Elasticsearch will filter on the `@timestamp` field for values
 greater than `1/1/2000 00:00:00`.
 
-Generally the value should be unique and increment for new data added to Elasticsearch (why a timestamp or auto incrementing sequence number are good choices).
+Generally the value should be unique and be automatically incremented as new data is added to Elasticsearch (why a timestamp or auto incrementing sequence number are good choices).
 
-For more information refer to: [Tableau Online Help](https://onlinehelp.tableau.com/current/pro/desktop/en-us/qs_datasources_connections.html)
+For more information refer to: 
+
+ - [Tableau Online Help](https://onlinehelp.tableau.com/current/pro/desktop/en-us/qs_datasources_connections.html)
+ - [Tableau Web Data Connector Incremental Refresh](https://jdomingu.github.io/webdataconnector/docs/wdc_incremental_refresh)
 
 # Sponsorship
 
