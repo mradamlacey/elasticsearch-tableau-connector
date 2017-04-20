@@ -185,6 +185,14 @@ var aggregations = (function () {
 
             };
 
+            
+            if (self.tableauData == null) {
+                return cb("Connection Data not provided for Elasticsearch", null);
+            }
+            if (!self.tableauData.elasticsearchUrl || !self.tableauData.elasticsearchIndex || !self.tableauData.elasticsearchType) {
+                return cb("Connection Data not provided for Elasticsearch", null);
+            }
+
             elasticsearchConnector.getElasticsearchTypeMapping(self.tableauData,
                 function (err, data, connectionData) {
 
