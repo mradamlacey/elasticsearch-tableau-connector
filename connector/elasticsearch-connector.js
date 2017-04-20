@@ -1379,6 +1379,9 @@ var elasticsearchConnector = (function () {
 
     var beforeSendAddAuthHeader = function(xhr, connectionData){
         
+        xhr.setRequestHeader('Accept', null);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+
         var creds = getAuthCredentials(connectionData);
 
         if (connectionData.elasticsearchAuthenticate && creds.username) {
