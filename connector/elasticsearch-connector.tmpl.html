@@ -35,23 +35,7 @@
             </div>
         </div>
 
-        <div id="divMessage" class="row" style="display: none">
-            <div class="col-md-10 col-md-offset-1">
-                <div class="alert alert-success">
-                    <p id="messageText"></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="row no-tableau">
-            <div class="col-md-10 col-md-offset-1">
-                <div class="alert alert-info">
-                    <p>Please open this URL from within Tableau</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="row tableau">
+        <div class="row" data-bind="visible: loaded" style="display: none;">
             <div class="col-md-10 col-md-offset-1">
 
 
@@ -440,7 +424,7 @@
                     Preview
                 </button>
 
-                <button class="btn btn-primary" data-bind="click: submit">
+                <button class="btn btn-primary" data-bind="click: submit, visible: tableauInteractive">
                     Submit
                 </button>
 
