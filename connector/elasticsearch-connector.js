@@ -25,7 +25,7 @@ var elasticsearchConnector = (function () {
         aggQueryEditor;
 
     var toSafeTableauFieldName = function(unsafeName){
-        safeName = unsafeName ? unsafeName.replace(/[^\w]/g, "_") : "_null_";
+        safeName = unsafeName ? unsafeName.replace(/[^\w]/g, "_") : "";
 
         return safeName;
     };
@@ -149,9 +149,15 @@ var elasticsearchConnector = (function () {
         console.log('[connector:getSchema] column names: ' + _.pluck(cols, 'id').join(', '));
 
         var tableInfo = {
-            id : connectionData.connectionName || "default",
+            id : toSafeTableauFieldName(connectionData.connectionName) || "default", 
+            alias: toSafeTableauFieldName(connectionData.connectionName) || "default", 
+            description: "",
             columns : cols
         };
+
+        if(connectionData.useIncrementalRefresh){
+            tableInfo.incrementColumnId = connectionData.incrementalRefreshColumn;
+        }
 
         schemaCallback([tableInfo]);
     };
@@ -203,28 +209,37 @@ var elasticsearchConnector = (function () {
         console.log('[connector.init] fired');
 
         if (tableau.phase == tableau.phaseEnum.interactivePhase) {
-            $('.no-tableau').css('display', 'none');
-            $('.tableau').css('display', 'block');
+            console.log('[connector.init] interactive phase...');
 
-            initUIControls();
+            var connectionData = tableau.connectionData;
+
+            if (connectionData) {
+
+                try {
+                    connectionData = JSON.parse(connectionData);
+                    console.log("[connector:init] Previously saved connection data, updating: ", connectionData)
+                    tableauData.updateProperties(connectionData);
+                }
+                catch (err) {
+                    abort("Error in loading previously saved settings for the connector: " + err)
+                    return
+                }
+            }
+            else {
+                connectionData = {};
+            }
+
+            if (tableau.phase == tableau.phaseEnum.interactivePhase) {
+                initUIControls();
+            }
+
+            init(connectionData);
         }
 
         cb();
     }
 
     myConnector.shutdown = function (shutdownCallback) {
-        endTime = moment();
-        var runTime = endTime.diff(startTime) / 1000;
-        $('#myPleaseWait').modal('hide');
-
-        $('#divError').css('display', 'none');
-        $('#divMessage').css('display', 'block');
-        $('#messageText').text(totalCount + ' total rows retrieved, in: ' + runTime + ' (s)');
-
-        $('html, body').animate({
-            scrollTop: $("#divMessage").offset().top
-        }, 500);
-
         console.log('[connector:shutdown] callback...');
         shutdownCallback();
     };
@@ -238,6 +253,26 @@ var elasticsearchConnector = (function () {
     $(document).ready(function () {
 
         console.log('[$.document.ready] fired...');
+        
+        setTimeout(function(){
+            console.log("tableau platformBuildNumber...:",tableau, tableau.platformBuildNumber);
+            if (tableau.phase == tableau.phaseEnum.interactivePhase) {
+                console.log("[elasticsearchConnector] Connector UI called from Tableau WDC interactive mode, phase: ", tableau.phase)
+            }
+            else if (tableau.phase == tableau.phaseEnum.gatherDataPhase) {
+                console.log("[elasticsearchConnector] Connector UI called from Tableau WDC data gather mode, phase: ", tableau.phase)
+            }
+            else if (tableau.phase == tableau.phaseEnum.authPhase) {
+                console.log("[elasticsearchConnector] Connector UI called from Tableau WDC auth mode, phase: ", tableau.phase)
+            }
+            else {
+                console.log("[elasticsearchConnector] Connector UI called in standalone mode");
+                initUIControls();
+                init({});
+            }
+        }, 2500);
+
+
     });
 
     var initUIControls = function () {
@@ -258,10 +293,6 @@ var elasticsearchConnector = (function () {
             content: "Use Query String syntax to define a filter to apply to the data that is aggregated.  Refer to: <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax' target='_blank'>Query String Syntax</a>"           
         });
 
-        $("#submitButton").click(function (e) { // This event fires when a button is clicked            
-            console.log("[Elasticsearch Connector] - Submit - noop")
-        });
-
     };
 
     var getElasticsearchConnectionFieldInfo = function (connectionData, cb) {
@@ -275,13 +306,11 @@ var elasticsearchConnector = (function () {
         switch (connectionData.elasticsearchResultMode) {
             case "search":
                 // Retrieve the Elasticsearch mapping before we call tableau submit
-                // There is a bug when getColumnHeaders is invoked, and you call 'headersCallback'
-                // asynchronously
                 getElasticsearchTypeMapping(connectionData, function (err, data, connectionData) {
 
                     if (err) {
                         if(cb) cb(err);
-                        return abort(err);
+                        return;
                     }
 
                     var addChildFields = function (name, objType) {
@@ -621,6 +650,50 @@ var elasticsearchConnector = (function () {
             };
         }
 
+        if(connectionData.useIncrementalRefresh){
+
+            sortEntry = {};
+            sortEntry[connectionData.incrementalRefreshColumn] = {"order" : "asc", "missing" : "_first"};
+
+            requestData.sort = [ sortEntry ];
+
+            if (table && table.incrementValue) {
+
+                var isDateField = _.find(connectionData.dateFields, function(field){
+                    if (field == connectionData.incrementalRefreshColumn){
+                        return true;
+                    }
+
+                    return false;
+                });
+                var incrementValue = "";
+                if(_.isArray(table.incrementValue)){
+                    incrementValue = table.incrementValue.length > 0 ? table.incrementValue[0] : "";
+                }else{
+                    incrementValue = table.incrementValue;
+                }
+
+                if(isDateField){
+                    incrementValue = moment.utc(incrementValue.replace(' +', '+')
+                        .replace(' -', '-')).format("YYYY-MM-DDTHH:mm:ss");
+                }else{
+                    incrementValue = table.incrementValue;
+                }
+                var filter = { range: {} };
+                filter.range[connectionData.incrementalRefreshColumn] = { "gt": incrementValue };
+
+                if (requestData.query == null) {
+                    requestData.query = { bool: {} };
+                }
+                if (requestData.query.bool == null) {
+                    requestData.query = { bool: {} };
+                }
+
+                requestData.query.bool.filter = [filter];
+            }
+
+        }
+
         requestData.size = connectionData.batchSize;
 
         var connectionUrl = connectionData.elasticsearchUrl + '/' + connectionData.elasticsearchIndex + '/' +
@@ -798,6 +871,10 @@ var elasticsearchConnector = (function () {
                         return;
                     }
 
+                    if( !_.isString(item[field])){
+                        return;
+                    }
+
                     val = null;
                     if(_.isArray(item[field])){
                         val = item[field][0]
@@ -807,7 +884,10 @@ var elasticsearchConnector = (function () {
                     }
                     
                     fieldName = toSafeTableauFieldName(field);
-
+                    
+                    // convert dateField to String before calling .replace() on it
+				    val = val + ''; 
+                    
                     item[fieldName] = moment.utc(val.replace(' +', '+')
                         .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
                 });
@@ -868,7 +948,7 @@ var elasticsearchConnector = (function () {
                 table.appendRows(toRet);
             }            
 
-            return { results: toRet, scrollId: data._scroll_id, numProcessed: toRet.length, more: moreRecords };
+            return ({ results: toRet, scrollId: data._scroll_id, numProcessed: toRet.length, more: moreRecords });
 
         } else {
             console.log("[getRemainingScrollResults] No results found for Elasticsearch query: " + JSON.stringify(requestData));
@@ -1299,6 +1379,9 @@ var elasticsearchConnector = (function () {
 
     var beforeSendAddAuthHeader = function(xhr, connectionData){
         
+        xhr.setRequestHeader('Accept', null);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+
         var creds = getAuthCredentials(connectionData);
 
         if (connectionData.elasticsearchAuthenticate && creds.username) {
@@ -1311,6 +1394,13 @@ var elasticsearchConnector = (function () {
         aggregationData = data;
     };
 
+    var init = ko.observable();
+    var subscribeInitEvent = function(cb){
+        if (_.isFunction(cb)){
+            init.subscribe(cb);
+        }
+    }
+
     return {
         abort: abort,
         updateAggregationData: updateAggregationData,
@@ -1320,7 +1410,8 @@ var elasticsearchConnector = (function () {
         openSearchScrollWindow: openSearchScrollWindow,
         getRemainingScrollResults: getRemainingScrollResults,
         getAggregationResponse: getAggregationResponse,
-        toSafeTableauFieldName: toSafeTableauFieldName
+        toSafeTableauFieldName: toSafeTableauFieldName,
+        subscribeInitEvent: subscribeInitEvent
     }
 
 })();

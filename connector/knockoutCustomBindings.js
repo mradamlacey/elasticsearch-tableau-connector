@@ -103,10 +103,19 @@ var koCustomBindings = (function () {
                     }
                 }
             };
+
+            console.log("Element val: " + $(element).val() + ", val accessor: " + ko.unwrap(valueAccessor()));
+
             if ($(element).val() == ko.unwrap(valueAccessor())) {
                 $(element).closest('.btn').button('toggle');
             }
             ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
+        },
+        update: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
+            console.log("Element val: " + $(element).val() + ", val accessor: " + ko.unwrap(valueAccessor()));
+            if ($(element).val() == ko.unwrap(valueAccessor())) {
+                $(element).closest('.btn').button('toggle');
+            }
         }
     };
 

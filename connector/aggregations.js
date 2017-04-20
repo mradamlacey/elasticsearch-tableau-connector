@@ -13,6 +13,7 @@ var aggregations = (function () {
 
         var self = this;
 
+        self.pauseSubscriptions = ko.observable(false);
         self.tableauData = {};
         self.tableauDataSubscription = null;
         self.setTableauData = function(tableauData){
@@ -45,6 +46,10 @@ var aggregations = (function () {
         self.useCustomQuery = ko.observable(false);
 
         self.useCustomQuery.subscribe(function(newValue){
+            if(self.pauseSubscriptions()){
+                return;
+            }
+
             self.aggregationFilter("");
             self.buckets.removeAll();
             self.metrics.removeAll();
@@ -179,6 +184,14 @@ var aggregations = (function () {
                 });
 
             };
+
+            
+            if (self.tableauData == null) {
+                return cb("Connection Data not provided for Elasticsearch", null);
+            }
+            if (!self.tableauData.elasticsearchUrl || !self.tableauData.elasticsearchIndex || !self.tableauData.elasticsearchType) {
+                return cb("Connection Data not provided for Elasticsearch", null);
+            }
 
             elasticsearchConnector.getElasticsearchTypeMapping(self.tableauData,
                 function (err, data, connectionData) {
@@ -329,26 +342,24 @@ var aggregations = (function () {
         self.type = ko.observable(type ? type : "Count");
         self.field = ko.observable(field);
 
-        self.type.subscribe(function(newValue){
-
-        });
-        self.field.subscribe(function(newValue){
-
-        });
     };
 
     var Bucket = function(type, field, options){
 
         var self = this;
 
+        if (options == null){
+            options = {};
+        }
+
         self.type = ko.observable(type ? type : ["Terms"]);
         self.field = ko.observable(field);
         self.fields = ko.observableArray([]);
-        self.termSize = ko.observable(0);
-        self.dateHistogramType = ko.observable();
-        self.dateHistogramCustomInterval = ko.observable();
-        self.ranges = ko.observableArray([]);
-        self.dateRanges = ko.observableArray([]);
+        self.termSize = ko.observable(options.termSize ? options.termSize : 0);
+        self.dateHistogramType = ko.observable(options.dateHistogramType ? options.dateHistogramType : null);
+        self.dateHistogramCustomInterval = ko.observable(options.dateHistogramCustomInterval ? options.dateHistogramCustomInterval : null);
+        self.ranges = ko.observableArray(options.ranges ? options.ranges : []);
+        self.dateRanges = ko.observableArray(options.dateRanges ? options.dateRanges : []);
         self.dateRangeTypes = ko.observableArray(["Relative", "Absolute", "Custom", "Now"]);
         self.relativeOptions = ko.observableArray([ "Minute(s) ago", "Hour(s) ago", "Day(s) ago", "Week(s) ago", "Month(s) ago", "Year(s) ago"]);
 
@@ -479,6 +490,8 @@ var aggregations = (function () {
 
         self.updateFields = function(){
 
+            var fieldValue = self.field();
+
             vm.getUpdatedTypeFields(function(data){
 
                 var newFields = [];
@@ -555,6 +568,8 @@ var aggregations = (function () {
                     self.fields.push(newField);
                 });
 
+                self.field(fieldValue);
+
             });
         };
 
@@ -569,6 +584,10 @@ var aggregations = (function () {
 
         });
 
+        if (self.field()){
+            console.log("[aggregations] Bucket - calling update fields");
+            self.updateFields();
+        }
     };
 
     var Range = function(type, from, to, relativeNumFrom, relativeNumTo, fromRelative, toRelative, fromType, toType){
@@ -755,12 +774,19 @@ var aggregations = (function () {
 
     vm.useAggFilter.subscribe(function(newValue){
 
+        if(vm.pauseSubscriptions()){
+            return true;
+        }
+
         if(!newValue){
             vm.aggregationFilter("");
         }
 
     });
 
+    vm.NewMetric = Metric;
+    vm.NewBucket = Bucket;
+    vm.NewRange = Range;
 
     var getAggregationData = function(){
         var metrics = _.map(vm.getMetrics(), function(metric){
@@ -832,6 +858,7 @@ var aggregations = (function () {
 
         var data = {
             filter: vm.useAggFilter() ? vm.aggregationFilter() : null,
+            useAggFilter: vm.useAggFilter(),
             metrics: metrics,
             buckets: buckets,
             useCustomQuery: vm.useCustomQuery(),
