@@ -16,7 +16,7 @@ number of hits.  The user can override the batch size to retrieve more records p
 
 # Demo
 
-(Live Demo of Connector)[https://mradamlacey.github.io/elasticsearch-tableau-connector/elasticsearch-connector.html]
+[Live Demo of Connector](https://mradamlacey.github.io/elasticsearch-tableau-connector/elasticsearch-connector.html)
 
 # Compatibility
 
