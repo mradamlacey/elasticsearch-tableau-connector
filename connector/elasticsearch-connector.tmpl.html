@@ -39,9 +39,11 @@
             <div class="col-md-10 col-md-offset-1">
 
 
-                <div class="form-group">
+                <div class="form-group required" data-bind="css: { 'has-error': validation().connectionName, 'has-feedback': validation().connectionName }">
                     <label for="inputConnectionName">Connection Name</label>
                     <input class="form-control" id="inputConnectionName" placeholder="Enter unique name of Tableau Data Connection" data-bind="value: connectionName">
+                    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().connectionName"></span>
+                    <span class="sr-only" data-bind="if: validation().connectionName">(error)</span>
                 </div>
                 <div class="checkbox">
                     <label>
