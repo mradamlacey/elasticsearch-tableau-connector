@@ -553,6 +553,11 @@ var app = (function () {
                 messages: []
             };
 
+            if(!self.connectionName()){
+                validation.messages.push("Connection name is required");
+                validation.connectionName = true
+            }
+
             if (self.useBasicAuthentication()) {
                 if (!self.username()) {
                     validation.messages.push("Username is required");
@@ -707,6 +712,13 @@ var app = (function () {
             vm.incrementalRefreshColumn(incrementalRefreshColumn);
         }
     };
+
+    vm.connectionName.subscribe(function (newValue) {
+
+        tableauData.updateProperties(vm.getTableauConnectionData());
+        self.validate();
+
+    });
 
     vm.elasticsearchUrl.subscribe(function (newValue) {
 
