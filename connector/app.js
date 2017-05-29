@@ -12,6 +12,10 @@ var app = (function () {
         self.elasticsearchUrl = ko.observable();
         self.elasticsearchIndex = ko.observable();
 
+        self.overrideFieldDefaults = ko.observable(false);
+        self.allDatesAsLocalTime = ko.observable(false);
+        self.useEsFieldNameAsAliases = ko.observable(false);
+
         self.resultMode = ko.observable("search");
 
         self.useCustomQuery = ko.observable(false);
@@ -229,6 +233,9 @@ var app = (function () {
                 elasticsearchPassword: self.password(),
                 elasticsearchIndex: self.elasticsearchIndex(),
                 elasticsearchType: self.elasticsearchType(),
+                overrideFieldDefaults: self.overrideFieldDefaults(),
+                allDatesAsLocalTime: self.allDatesAsLocalTime(),
+                useEsFieldNameAsAliases: self.useEsFieldNameAsAliases(),
                 useCustomQuery: self.useCustomQuery(),
                 elasticsearchQuery: self.searchCustomQuery(),
                 elasticsearchResultMode: self.resultMode(),

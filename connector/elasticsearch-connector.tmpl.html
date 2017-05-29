@@ -96,6 +96,40 @@
                     </input>
 
                 </div>
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" data-bind="checked: overrideFieldDefaults">Override Field Defaults?
+                  </label>
+                </div>
+
+<div class="panel panel-default"  data-bind="visible: overrideFieldDefaults">
+  <div class="panel-body">
+                    <div class="form-group">
+
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: allDatesAsLocalTime">Parse date fields in local time?
+                    </label>
+                  </div>
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: useEsFieldNameAsAliases">Use field aliases?
+                      <i data-bind="bootstrapPopover" 
+                               class="glyphicon glyphicon-info-sign" 
+                               data-toggle="popover" data-trigger="hover" 
+                               title="Use field aliases"
+                               data-content="When checked, this will use the same Elasticsearch field name as the Tableau field name.  This overrides the default behavior which appends the datasource name with the Elasticsearch field name in Tableau."></i>
+
+                    </label>
+                  </div>
+                    
+
+                </div>
+  </div>
+</div>
+
+
+
                 <div>
                 </div>
 

@@ -140,10 +140,16 @@ var elasticsearchConnector = (function () {
 
         var cols = _.map(connectionData.fields, function(field){
 
-            return {
+            var colInfo = {
                 id: toSafeTableauFieldName(field.name),
                 dataType: field.dataType
             };
+
+            if(connectionData.useEsFieldNameAsAliases){
+                colInfo.alias = colInfo.id;
+            }
+
+            return colInfo;
         });
 
         console.log('[connector:getSchema] column names: ' + _.pluck(cols, 'id').join(', '));
@@ -674,8 +680,17 @@ var elasticsearchConnector = (function () {
                 }
 
                 if(isDateField){
-                    incrementValue = moment.utc(incrementValue.replace(' +', '+')
-                        .replace(' -', '-')).format("YYYY-MM-DDTHH:mm:ss");
+
+                    if(connectionData.allDatesAsLocalTime){
+                        incrementValue = moment(incrementValue.replace(' +', '+')
+                            .replace(' -', '-')).format("YYYY-MM-DDTHH:mm:ss");
+                    }else{
+                        // Parse as UTC time
+                        incrementValue = moment.utc(incrementValue.replace(' +', '+')
+                            .replace(' -', '-')).format("YYYY-MM-DDTHH:mm:ss");
+                    }
+
+                    
                 }else{
                     incrementValue = table.incrementValue;
                 }
@@ -888,8 +903,15 @@ var elasticsearchConnector = (function () {
                     // convert dateField to String before calling .replace() on it
 				    val = val + ''; 
                     
-                    item[fieldName] = moment.utc(val.replace(' +', '+')
-                        .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
+                    if(connectionData.allDatesAsLocalTime){
+                        item[fieldName] = moment(val.replace(' +', '+')
+                            .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
+                    }else{
+                         // Parse as UTC time
+                         item[fieldName] = moment.utc(val.replace(' +', '+')
+                            .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
+                    }
+                    
                 });
                 _.each(connectionData.geoPointFields, function (field) {
 
@@ -1074,7 +1096,14 @@ var elasticsearchConnector = (function () {
 
                     var bucketValue;
                     if (field.indexOf("bucket_date_histogram_") == 0) {
-                        bucketValue = moment.utc(bucket.key_as_string).format('YYYY-MM-DD HH:mm:ss');
+                        if(connectionData.allDatesAsLocalTime){
+                            bucketValue = moment(bucket.key_as_string).format('YYYY-MM-DD HH:mm:ss');
+                        }
+                        else{
+                            // Parse as UTC time
+                            bucketValue = moment.utc(bucket.key_as_string).format('YYYY-MM-DD HH:mm:ss');
+                        }
+                        
                     }
                     else {
                         bucketValue = bucket.key;
