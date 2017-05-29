@@ -716,7 +716,7 @@ var app = (function () {
     vm.connectionName.subscribe(function (newValue) {
 
         tableauData.updateProperties(vm.getTableauConnectionData());
-        self.validate();
+        vm.validate();
 
     });
 
