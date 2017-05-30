@@ -766,6 +766,16 @@ var app = (function () {
         vm.getElasticsearchFieldData(updateIncrementalRefreshColumns);
     });
 
+    vm.overrideFieldDefaults.subscribe(function (newValue) {
+        tableauData.updateProperties(vm.getTableauConnectionData());
+    });
+    vm.allDatesAsLocalTime.subscribe(function (newValue) {
+        tableauData.updateProperties(vm.getTableauConnectionData());
+    });
+    vm.useEsFieldNameAsAliases.subscribe(function (newValue) {
+        tableauData.updateProperties(vm.getTableauConnectionData());
+    });
+
     vm.useCustomQuery.subscribe(function(newValue){
         if( newValue == false){
             console.log("Setting use custom query to false...")
