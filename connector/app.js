@@ -15,6 +15,7 @@ var app = (function () {
         self.overrideFieldDefaults = ko.observable(false);
         self.allDatesAsLocalTime = ko.observable(false);
         self.useEsFieldNameAsAliases = ko.observable(false);
+        self.useEsFieldNameAsAliasesPopoverContent = ko.observable("When checked, this will override the default behavior and field names will be improved similar to how Tableau automatically improves field names of other data sources as defined in the following: <a href=\"http://onlinehelp.tableau.com/current/pro/desktop/en-us/help.htm#data_clean_adm.html\" target=\"_blank\">Tableau Help Article</a>.  Default when unchecked is to use the same names as in the Elasticsearch type.");
 
         self.resultMode = ko.observable("search");
 
@@ -278,7 +279,8 @@ var app = (function () {
                 }
 
                 _.each(esFieldData.fields, function (field) {
-                    self.previewFields.push(elasticsearchConnector.toSafeTableauFieldName(field.name));
+                    var connectionData = tableauData.getUnwrapped();
+                    self.previewFields.push(elasticsearchConnector.getTableauFieldAlias(connectionData, field.name));
                 });
 
                 tableauData.updateProperties(esFieldData);

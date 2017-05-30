@@ -30,6 +30,25 @@ var elasticsearchConnector = (function () {
         return safeName;
     };
 
+    var getTableauFieldAlias = function(connectionData, fieldName){
+
+            if(!fieldName){
+                return fieldName;
+            }
+
+            var alias = toSafeTableauFieldName(fieldName);
+
+            if(connectionData.useEsFieldNameAsAliases){
+                alias = alias.replace("_", " ");
+                if(alias.indexOf(" ") == 0){
+                    alias = "_" + alias.substring(1);
+                }
+                alias = Humanize.capitalizeAll(alias);
+            }
+
+            return alias;
+    };
+
     var addElasticsearchField = function (name, esType, format, hasLatLon) {
 
         if (_.isUndefined(elasticsearchTableauDataTypeMap[esType])) {
@@ -142,12 +161,9 @@ var elasticsearchConnector = (function () {
 
             var colInfo = {
                 id: toSafeTableauFieldName(field.name),
+                alias: getTableauFieldAlias(connectionData, field.name),
                 dataType: field.dataType
             };
-
-            if(connectionData.useEsFieldNameAsAliases){
-                colInfo.alias = colInfo.id;
-            }
 
             return colInfo;
         });
@@ -155,9 +171,8 @@ var elasticsearchConnector = (function () {
         console.log('[connector:getSchema] column names: ' + _.pluck(cols, 'id').join(', '));
 
         var tableInfo = {
-            id : toSafeTableauFieldName(connectionData.connectionName) || "default", 
-            alias: toSafeTableauFieldName(connectionData.connectionName) || "default", 
-            description: "",
+           id : toSafeTableauFieldName(connectionData.connectionName) || "default", 
+           // description: "",
             columns : cols
         };
 
@@ -1440,6 +1455,7 @@ var elasticsearchConnector = (function () {
         getRemainingScrollResults: getRemainingScrollResults,
         getAggregationResponse: getAggregationResponse,
         toSafeTableauFieldName: toSafeTableauFieldName,
+        getTableauFieldAlias: getTableauFieldAlias,
         subscribeInitEvent: subscribeInitEvent
     }
 
