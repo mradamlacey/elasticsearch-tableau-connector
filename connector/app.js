@@ -767,6 +767,10 @@ var app = (function () {
     });
 
     vm.overrideFieldDefaults.subscribe(function (newValue) {
+        if(!newValue){
+            vm.allDatesAsLocalTime(false);
+            vm.useEsFieldNameAsAliases(false);
+        }
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
     vm.allDatesAsLocalTime.subscribe(function (newValue) {
