@@ -222,6 +222,9 @@ The Elasticsearch connector UI includes the following fields:
 | Password | String | If 'Use HTTP Basic Auth' is checked, this is the password |
 | Index name | String | \[Required\] Name of the index in the Elasticsearch cluster |
 | Type | String | \[Required\] Name of the type in the Elasticsearch cluster to query |
+| Override Field Defaults | Boolean | If selected, then additional options to override default handling of fields is available |
+| Parse date fields in local time? | Boolean | If selected then all date or timestamp fields will be parsed in local time, the default (unselected) will parse as UTC |
+| Improve Field Names? | Boolean | If selected, then additional logic will be applied to improve field names in similar ways to the following : [Tableau help article](http://onlinehelp.tableau.com/current/pro/desktop/en-us/help.htm#data_clean_adm.html).  Default is false. |
 | Result Mode | Option | Option to retrieve search results from Elasticsearch (Search Result Mode) or from a query using aggregation (Aggregation Mode) |
 | Use custom query? | Boolean | If true, indicates if the extract should use a custom query against Elasticsearch in search result mode, if false extract will be a 'match all' |
 | Query | String | If `Use custom query?` is true, this will be the JSON request payload sent to Elasticsearch in search result mode.  `from`, and `size` will be overwritten if supplied. Refer to [Elasticsearch Query DSL](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html) for a reference on writing a query |
@@ -282,6 +285,8 @@ e.g.:
 
 > Note: Field names available to select from the Connector UI will be the Elasticsearch field names, but data in Preview Mode and what is actually
 provided to Tableau will be converted to the safe names
+
+> Note: Additional logic will be applied to rename fields according to: [Tableau help article](http://onlinehelp.tableau.com/current/pro/desktop/en-us/help.htm#data_clean_adm.html)when 'Improve Field Names' has been selected under 'Override Field Defaults'
 
 ## Handling Elasticsearch Data Types
 

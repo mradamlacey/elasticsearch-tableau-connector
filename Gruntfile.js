@@ -84,7 +84,8 @@ require('load-grunt-tasks')(grunt);
             { src: 'resources/theme-monokai.js', dest: 'public/theme-monokai.js', expand: false },
             { src: 'resources/theme-github.js', dest: 'public/theme-github.js', expand: false },
             { src: 'resources/theme-solarized_light.js', dest: 'public/theme-solarized_light.js', expand: false },
-            { src: 'resources/elasticsearch-logo.png', dest: 'public/elasticsearch-logo.png', expand: false }
+            { src: 'resources/elasticsearch-logo.png', dest: 'public/elasticsearch-logo.png', expand: false },
+            { src: 'resources/humanize.js', dest: 'public/humanize.js', expand: false }
         ]
       },
       dist: {
@@ -112,7 +113,8 @@ require('load-grunt-tasks')(grunt);
             { src: 'resources/theme-monokai.js', dest: 'dist-tmp/theme-monokai.js', expand: false },
             { src: 'resources/theme-github.js', dest: 'dist-tmp/theme-github.js', expand: false },
             { src: 'resources/theme-solarized_light.js', dest: 'dist-tmp/theme-solarized_light.js', expand: false },
-            { src: 'resources/elasticsearch-logo.png', dest: 'dist/css/elasticsearch-logo.png', expand: false }
+            { src: 'resources/elasticsearch-logo.png', dest: 'dist/css/elasticsearch-logo.png', expand: false },
+            { src: 'resources/humanize.js', dest: 'dist-tmp/humanize.js', expand: false }
         ]
       }
     },
@@ -149,7 +151,8 @@ require('load-grunt-tasks')(grunt);
                         'dist-tmp/toastr.js',
                         'dist-tmp/knockout.js',
                         'dist-tmp/lodash*.js',
-                        'dist-tmp/moment*.js',                        
+                        'dist-tmp/moment*.js',      
+                        'dist-tmp/humanize.js',               
                         'dist-tmp/elasticsearch-connector.js',
                         'dist-tmp/aggregations.js',
                         'dist-tmp/tableauData.js',

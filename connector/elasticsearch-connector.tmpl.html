@@ -96,6 +96,41 @@
                     </input>
 
                 </div>
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" data-bind="checked: overrideFieldDefaults">Override Field Defaults?
+                  </label>
+                </div>
+
+<div class="panel panel-default"  data-bind="visible: overrideFieldDefaults">
+  <div class="panel-body">
+                    <div class="form-group">
+
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: allDatesAsLocalTime">Parse date fields in local time?
+                      <i data-bind="bootstrapPopover" 
+                               class="glyphicon glyphicon-info-sign" 
+                               data-toggle="popover" data-trigger="hover" 
+                               title="Parse date fields in local time?"
+                               data-content="When checked, all date fields will be parsed in their local time and unchanged from the source.  The default when unchecked is all dates are parsed as UTC times."></i>
+
+                    </label>
+                  </div>
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: useEsFieldNameAsAliases">Improve Field Names?
+                      <i data-bind="bootstrapPopover, bootstrapPopoverType: 'rich', bootstrapPopoverContent: useEsFieldNameAsAliasesPopoverContent" class="glyphicon glyphicon-info-sign" title="Improve Field Names?"></i>
+                    </label>
+                  </div>
+                    
+
+                </div>
+  </div>
+</div>
+
+
+
                 <div>
                 </div>
 
@@ -538,6 +573,7 @@
     <script src="lodash.js" type="text/javascript"></script>
     <script src="moment.js" type="text/javascript"></script>
     <script src="ace.js" type="text/javascript"></script>
+    <script src="humanize.js" type="text/javascript"></script>
     <script src="elasticsearch-connector.js" type="text/javascript"></script>
     <script src="aggregations.js" type="text/javascript"></script>
     <script src="tableauData.js" type="text/javascript"></script>
