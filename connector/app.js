@@ -12,6 +12,11 @@ var app = (function () {
         self.elasticsearchUrl = ko.observable();
         self.elasticsearchIndex = ko.observable();
 
+        self.overrideFieldDefaults = ko.observable(false);
+        self.allDatesAsLocalTime = ko.observable(false);
+        self.useEsFieldNameAsAliases = ko.observable(false);
+        self.useEsFieldNameAsAliasesPopoverContent = ko.observable("When checked, this will override the default behavior and field names will be improved similar to how Tableau automatically improves field names of other data sources as defined in the following: <a href=\"http://onlinehelp.tableau.com/current/pro/desktop/en-us/help.htm#data_clean_adm.html\" target=\"_blank\">Tableau Help Article</a>.  Default when unchecked is to use the same names as in the Elasticsearch type.");
+
         self.resultMode = ko.observable("search");
 
         self.useCustomQuery = ko.observable(false);
@@ -229,6 +234,9 @@ var app = (function () {
                 elasticsearchPassword: self.password(),
                 elasticsearchIndex: self.elasticsearchIndex(),
                 elasticsearchType: self.elasticsearchType(),
+                overrideFieldDefaults: self.overrideFieldDefaults(),
+                allDatesAsLocalTime: self.allDatesAsLocalTime(),
+                useEsFieldNameAsAliases: self.useEsFieldNameAsAliases(),
                 useCustomQuery: self.useCustomQuery(),
                 elasticsearchQuery: self.searchCustomQuery(),
                 elasticsearchResultMode: self.resultMode(),
@@ -271,7 +279,8 @@ var app = (function () {
                 }
 
                 _.each(esFieldData.fields, function (field) {
-                    self.previewFields.push(elasticsearchConnector.toSafeTableauFieldName(field.name));
+                    var connectionData = tableauData.getUnwrapped();
+                    self.previewFields.push(elasticsearchConnector.getTableauFieldAlias(connectionData, field.name));
                 });
 
                 tableauData.updateProperties(esFieldData);
@@ -553,6 +562,11 @@ var app = (function () {
                 messages: []
             };
 
+            if(!self.connectionName()){
+                validation.messages.push("Connection name is required");
+                validation.connectionName = true
+            }
+
             if (self.useBasicAuthentication()) {
                 if (!self.username()) {
                     validation.messages.push("Username is required");
@@ -615,7 +629,7 @@ var app = (function () {
 
     var isValidUrl = function (str) {
         var pattern = new RegExp('^(https?:\/\/)?' + // protocol
-            '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\.)+[a-z]{2,}|' + // domain name
+            '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\.)+[a-z\\d]{2,}|' + // domain name
             '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
             '(\\:\\d+)?(\/[-a-z\\d%_.~+]*)*' + // port and path
             '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
@@ -708,6 +722,13 @@ var app = (function () {
         }
     };
 
+    vm.connectionName.subscribe(function (newValue) {
+
+        tableauData.updateProperties(vm.getTableauConnectionData());
+        vm.validate();
+
+    });
+
     vm.elasticsearchUrl.subscribe(function (newValue) {
 
         vm.elasticsearchIndex("");
@@ -743,6 +764,20 @@ var app = (function () {
         tableauData.updateProperties(vm.getTableauConnectionData());
 
         vm.getElasticsearchFieldData(updateIncrementalRefreshColumns);
+    });
+
+    vm.overrideFieldDefaults.subscribe(function (newValue) {
+        if(!newValue){
+            vm.allDatesAsLocalTime(false);
+            vm.useEsFieldNameAsAliases(false);
+        }
+        tableauData.updateProperties(vm.getTableauConnectionData());
+    });
+    vm.allDatesAsLocalTime.subscribe(function (newValue) {
+        tableauData.updateProperties(vm.getTableauConnectionData());
+    });
+    vm.useEsFieldNameAsAliases.subscribe(function (newValue) {
+        tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
     vm.useCustomQuery.subscribe(function(newValue){
