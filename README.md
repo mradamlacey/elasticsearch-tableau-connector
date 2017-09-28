@@ -345,6 +345,10 @@ column is stored and used on subsequent extracts as the starting value.  E.g., i
 then the next time an incremental extract is processed, the query to Elasticsearch will filter on the `@timestamp` field for values
 greater than `1/1/2000 00:00:00`.
 
+A system generated field will be added to your Tableau datasource with the name of the incremental refresh column preprended with '_incremental_'.  This is used
+for internal storage of processing of incremental extracts.  Example, if you select a field named 'id' to use as the incremental refresh column, then
+you will see a column named '_incremental_id' in your data source.
+
 Generally the value should be unique and be automatically incremented as new data is added to Elasticsearch (why a timestamp or auto incrementing sequence number are good choices).
 
 For more information refer to: 

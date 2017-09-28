@@ -49,6 +49,10 @@ var elasticsearchConnector = (function () {
             return alias;
     };
 
+    var getElasticsearchDateFields = function(){
+        return elasticsearchDateFields;
+    }
+
     var addElasticsearchField = function (name, esType, format, hasLatLon) {
 
         if (_.isUndefined(elasticsearchTableauDataTypeMap[esType])) {
@@ -64,6 +68,28 @@ var elasticsearchConnector = (function () {
 
         if (esType == 'date') {
             elasticsearchDateFields.push(name);
+        }
+
+        // Add system 'raw' field for incremental refresh column
+        var connectionData = JSON.parse(tableau.connectionData);
+        if(connectionData.useIncrementalRefresh && connectionData.incrementalRefreshColumn == name){
+
+            var origRefreshColumn = _.find(elasticsearchFields, function(esField){
+                return esField.name == connectionData.incrementalRefreshColumn;
+            });
+
+            if(!origRefreshColumn){
+                return abort("Unable to find incremental refresh column: " + connectionData.incrementalRefreshColumn, true);
+            }
+
+            var refreshDataType = tableau.dataTypeEnum.string;
+            if (origRefreshColumn.dataType == tableau.dataTypeEnum.float ||
+                origRefreshColumn.dataType == tableau.dataTypeEnum.double ||
+                origRefreshColumn.dataType == tableau.dataTypeEnum.int) {
+                    refreshDataType = tableau.dataTypeEnum.float;
+            }
+
+            elasticsearchFields.push({name: connectionData.rawIncrementalRefreshColumn, dataType: refreshDataType});
         }
 
         if (esType == 'geo_point') {
@@ -177,7 +203,7 @@ var elasticsearchConnector = (function () {
         };
 
         if(connectionData.useIncrementalRefresh){
-            tableInfo.incrementColumnId = connectionData.incrementalRefreshColumn;
+            tableInfo.incrementColumnId = connectionData.rawIncrementalRefreshColumn;
         }
 
         schemaCallback([tableInfo]);
@@ -694,21 +720,8 @@ var elasticsearchConnector = (function () {
                     incrementValue = table.incrementValue;
                 }
 
-                if(isDateField){
+                incrementValue = table.incrementValue;
 
-                    if(connectionData.allDatesAsLocalTime){
-                        incrementValue = moment(incrementValue.replace(' +', '+')
-                            .replace(' -', '-')).format("YYYY-MM-DDTHH:mm:ss");
-                    }else{
-                        // Parse as UTC time
-                        incrementValue = moment.utc(incrementValue.replace(' +', '+')
-                            .replace(' -', '-')).format("YYYY-MM-DDTHH:mm:ss");
-                    }
-
-                    
-                }else{
-                    incrementValue = table.incrementValue;
-                }
                 var filter = { range: {} };
                 filter.range[connectionData.incrementalRefreshColumn] = { "gt": incrementValue };
 
@@ -889,43 +902,70 @@ var elasticsearchConnector = (function () {
 
                     fieldName = toSafeTableauFieldName(field.name);
 
+                    // Dont overwrite previously stored value for raw incremental column
+                    if(connectionData.useIncrementalRefresh && fieldName == connectionData.rawIncrementalRefreshColumn){
+                        return;
+                    }
+
                     var fieldValue = getDeeplyNestedValue(hits[ii]._source, field.name);
                     item[fieldName] = _.isNull(fieldValue) || _.isUndefined(fieldValue) ? null : fieldValue;
+
+                    // Store the raw value from Elasticsearch to use in incremental refreshes
+                    if(connectionData.useIncrementalRefresh && fieldName == connectionData.incrementalRefreshColumn){
+                        val = null;
+                        if (_.isArray(item[fieldName])) {
+                            val = item[fieldName][0]
+                        }
+                        else {
+                            val = item[fieldName]
+                        }
+                        item[connectionData.rawIncrementalRefreshColumn] = val;
+                    }
 
                 });
 
                 // Copy over any formatted value to the source object
                 _.each(connectionData.dateFields, function (field) {
                     fieldName = toSafeTableauFieldName(field);
-                    
-		    if (!item[fieldName]) {
+
+                    if (!item[fieldName]) {
                         return;
                     }
 
-                    if( !_.isString(item[fieldName])){
+                    if (!_.isString(item[fieldName])) {
                         return;
                     }
 
                     val = null;
-                    if(_.isArray(item[fieldName])){
+                    if (_.isArray(item[fieldName])) {
                         val = item[fieldName][0]
                     }
-                    else{
+                    else {
                         val = item[fieldName]
                     }
-                    
+
                     // convert dateField to String before calling .replace() on it
-				    val = val + ''; 
-                    
-                    if(connectionData.allDatesAsLocalTime){
-                        item[fieldName] = moment(val.replace(' +', '+')
-                            .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
-                    }else{
-                         // Parse as UTC time
-                         item[fieldName] = moment.utc(val.replace(' +', '+')
-                            .replace(' -', '-')).format('YYYY-MM-DD HH:mm:ss');
+                    val = val + '';
+
+                    if (connectionData.allDatesAsLocalTime) {
+                        item[fieldName] = moment(val.replace(' +', '+').replace(' -', '-'));
+                    } else {
+                        // Parse as UTC time
+                        item[fieldName] = moment.utc(val.replace(' +', '+').replace(' -', '-'));
                     }
-                    
+
+                    if (!item[fieldName].isValid()) {
+                        var msg = 'Unable to parse date for field: ' + fieldName + '; value: ' + item[fieldName] + ', invalid return: ' + item[fieldName].invalidAt();
+                        return abort(msg, true);
+                    }
+
+                    var format = 'YYYY-MM-DD HH:mm:ss';
+                    if (connectionData.includeMilliseconds) {
+                        format = format + ".SSS";
+                    }
+
+                    item[fieldName] = item[fieldName].format(format);
+
                 });
                 _.each(connectionData.geoPointFields, function (field) {
 
@@ -935,11 +975,11 @@ var elasticsearchConnector = (function () {
 
                     var lat, lon = 0;
 
-                    if( _.isArray(item[field.name])){
+                    if (_.isArray(item[field.name])) {
                         lat = item[field.name][0];
                         lon = item[field.name][1];
                     }
-                    else if( _.isString(item[field.name])){
+                    else if (_.isString(item[field.name])) {
                         var latLonParts = item[field.name] ? item[field.name].split(', ') : [];
                         if (latLonParts.length != 2) {
                             console.log('[getTableData] Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
@@ -948,7 +988,7 @@ var elasticsearchConnector = (function () {
                         lat = parseFloat(latLonParts[0]);
                         lon = parseFloat(latLonParts[1]);
                     }
-                    else{
+                    else {
                         console.log('[getTableData] Bad format returned for geo_point field: ' + field.name + '; value: ' + item[field.name]);
                         return;
                     }
@@ -1111,12 +1151,25 @@ var elasticsearchConnector = (function () {
                     var bucketValue;
                     if (field.indexOf("bucket_date_histogram_") == 0) {
                         if(connectionData.allDatesAsLocalTime){
-                            bucketValue = moment(bucket.key_as_string).format('YYYY-MM-DD HH:mm:ss');
+                            bucketValue = moment(bucket.key_as_string);
                         }
                         else{
                             // Parse as UTC time
-                            bucketValue = moment.utc(bucket.key_as_string).format('YYYY-MM-DD HH:mm:ss');
+                            bucketValue = moment.utc(bucket.key_as_string);
                         }
+
+                        if(!bucketValue.isValid()){
+                            var msg = 'Could not parse date field while parsing Elasticsearch aggregation response: ' + key + '; value: ' + bucketValue + ', invalid return: ' + bucketValue.invalidAt() + ', recommended format is ISO8601';
+                            abort(msg);
+                            return;
+                        }
+    
+                        var format = 'YYYY-MM-DD HH:mm:ss';
+                        if(connectionData.includeMilliseconds){
+                            format = format + ".SSS";
+                        }
+
+                        bucketValue = bucketValue.format(format);
                         
                     }
                     else {
@@ -1455,7 +1508,8 @@ var elasticsearchConnector = (function () {
         getAggregationResponse: getAggregationResponse,
         toSafeTableauFieldName: toSafeTableauFieldName,
         getTableauFieldAlias: getTableauFieldAlias,
-        subscribeInitEvent: subscribeInitEvent
+        subscribeInitEvent: subscribeInitEvent,
+        getElasticsearchDateFields: getElasticsearchDateFields
     }
 
 })();
