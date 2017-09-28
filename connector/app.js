@@ -14,7 +14,10 @@ var app = (function () {
 
         self.overrideFieldDefaults = ko.observable(false);
         self.allDatesAsLocalTime = ko.observable(false);
+        self.includeMilliseconds = ko.observable(true);
         self.useEsFieldNameAsAliases = ko.observable(false);
+        self.useIncludeMilliseconds = ko.observable("When checked, this will include milliseconds when parsing date fields from Elasticsearch.  Ensure your type mapping supports milliseconds.");
+        
         self.useEsFieldNameAsAliasesPopoverContent = ko.observable("When checked, this will override the default behavior and field names will be improved similar to how Tableau automatically improves field names of other data sources as defined in the following: <a href=\"http://onlinehelp.tableau.com/current/pro/desktop/en-us/help.htm#data_clean_adm.html\" target=\"_blank\">Tableau Help Article</a>.  Default when unchecked is to use the same names as in the Elasticsearch type.");
 
         self.resultMode = ko.observable("search");
@@ -24,7 +27,10 @@ var app = (function () {
 
         self.useIncrementalRefresh = ko.observable(false);
         self.incrementalRefreshColumns = ko.observableArray([]);
+        self.rawIncrementalRefreshColumn = ko.observable();
         self.incrementalRefreshColumn = ko.observable();
+        self.usingDateForIncrementalRefresh = ko.observable(false);
+        self.incrementalRefreshColDateFormat = ko.observable();
 
         self.batchSize = ko.observable(10);
         self.limit = ko.observable(100);
@@ -244,6 +250,9 @@ var app = (function () {
                 useSyncClientWorkaround: self.useSyncClientWorkaround(),
                 useIncrementalRefresh: self.useIncrementalRefresh(),
                 incrementalRefreshColumn: self.incrementalRefreshColumn(),
+                rawIncrementalRefreshColumn: self.rawIncrementalRefreshColumn(),
+                usingDateForIncrementalRefresh: self.usingDateForIncrementalRefresh(),
+                incrementalRefreshColDateFormat: self.incrementalRefreshColDateFormat(),
                 batchSize: self.batchSize(),
                 limit: self.limit()
             };
@@ -801,8 +810,28 @@ var app = (function () {
         tableauData.updateProperties(vm.getTableauConnectionData());
     });
 
-     vm.incrementalRefreshColumn.subscribe(function (newValue) {
-        tableauData.updateProperties(vm.getTableauConnectionData());
+    vm.incrementalRefreshColumn.subscribe(function (newValue) {
+
+        vm.rawIncrementalRefreshColumn("_incremental_" + newValue);
+
+        var esDateFields = elasticsearchConnector.getElasticsearchDateFields();
+
+        var connectionData = vm.getTableauConnectionData();
+        tableauData.updateProperties(connectionData);
+
+        var isDateField = _.find(esDateFields, function(field){
+            if (field == newValue){
+                return true;
+            }
+
+            return false;
+        });
+        if(isDateField){
+            vm.usingDateForIncrementalRefresh(true);
+        }
+        else{
+            vm.usingDateForIncrementalRefresh(false);
+        }
     });
 
     vm.batchSize.subscribe(function (newValue) {
