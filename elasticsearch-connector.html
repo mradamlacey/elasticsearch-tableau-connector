@@ -112,6 +112,14 @@
 
                     </label>
                   </div>
+                  <!--
+                  <div class="checkbox">
+                    <label>
+                      <input type="checkbox" data-bind="checked: includeMilliseconds">Include milliseconds in dates?
+                      <i data-bind="bootstrapPopover, bootstrapPopoverType: 'rich', bootstrapPopoverContent: useIncludeMilliseconds" class="glyphicon glyphicon-info-sign" title="Include milliseconds in dates?"></i>
+                    </label>
+                  </div>
+                -->
                   <div class="checkbox">
                     <label>
                       <input type="checkbox" data-bind="checked: useEsFieldNameAsAliases">Improve Field Names?
@@ -174,6 +182,12 @@
                         <label for="inputBatchSize">Incremental Refresh Column</label>
                         <select class="form-control" data-bind="options: incrementalRefreshColumns, value: incrementalRefreshColumn, optionsText: 'name', optionsValue: 'name'"></select>
                     </div>
+                    <!--
+                    <div class="form-group required" data-bind="visible: usingDateForIncrementalRefresh">
+                        <label for="inputIncrementalRefreshColDateFormat">Date Format</label>
+                        <input type="text" class="form-control" id="inputIncrementalRefreshColDateFormat" placeholder="Enter date format" data-bind="value: incrementalRefreshColDateFormat">
+                    </div>
+                    -->
 
                     <div class="form-group required">
                         <label for="inputBatchSize">Batch record size for each response</label>
