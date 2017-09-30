@@ -27,7 +27,6 @@ var app = (function () {
 
         self.useIncrementalRefresh = ko.observable(false);
         self.incrementalRefreshColumns = ko.observableArray([]);
-        self.rawIncrementalRefreshColumn = ko.observable();
         self.incrementalRefreshColumn = ko.observable();
         self.usingDateForIncrementalRefresh = ko.observable(false);
         self.incrementalRefreshColDateFormat = ko.observable();
@@ -250,7 +249,6 @@ var app = (function () {
                 useSyncClientWorkaround: self.useSyncClientWorkaround(),
                 useIncrementalRefresh: self.useIncrementalRefresh(),
                 incrementalRefreshColumn: self.incrementalRefreshColumn(),
-                rawIncrementalRefreshColumn: self.rawIncrementalRefreshColumn(),
                 usingDateForIncrementalRefresh: self.usingDateForIncrementalRefresh(),
                 incrementalRefreshColDateFormat: self.incrementalRefreshColDateFormat(),
                 batchSize: self.batchSize(),
@@ -811,8 +809,6 @@ var app = (function () {
     });
 
     vm.incrementalRefreshColumn.subscribe(function (newValue) {
-
-        vm.rawIncrementalRefreshColumn("_incremental_" + newValue);
 
         var esDateFields = elasticsearchConnector.getElasticsearchDateFields();
 

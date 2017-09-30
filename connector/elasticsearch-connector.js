@@ -72,25 +72,6 @@ var elasticsearchConnector = (function () {
 
         // Add system 'raw' field for incremental refresh column
         var connectionData = JSON.parse(tableau.connectionData);
-        if(connectionData.useIncrementalRefresh && connectionData.incrementalRefreshColumn == name){
-
-            var origRefreshColumn = _.find(elasticsearchFields, function(esField){
-                return esField.name == connectionData.incrementalRefreshColumn;
-            });
-
-            if(!origRefreshColumn){
-                return abort("Unable to find incremental refresh column: " + connectionData.incrementalRefreshColumn, true);
-            }
-
-            var refreshDataType = tableau.dataTypeEnum.string;
-            if (origRefreshColumn.dataType == tableau.dataTypeEnum.float ||
-                origRefreshColumn.dataType == tableau.dataTypeEnum.double ||
-                origRefreshColumn.dataType == tableau.dataTypeEnum.int) {
-                    refreshDataType = tableau.dataTypeEnum.float;
-            }
-
-            elasticsearchFields.push({name: connectionData.rawIncrementalRefreshColumn, dataType: refreshDataType});
-        }
 
         if (esType == 'geo_point') {
             elasticsearchGeoPointFields.push({ name: name, hasLatLon: hasLatLon });
@@ -203,7 +184,7 @@ var elasticsearchConnector = (function () {
         };
 
         if(connectionData.useIncrementalRefresh){
-            tableInfo.incrementColumnId = connectionData.rawIncrementalRefreshColumn;
+            tableInfo.incrementColumnId = connectionData.incrementalRefreshColumn;
         }
 
         schemaCallback([tableInfo]);
@@ -722,6 +703,29 @@ var elasticsearchConnector = (function () {
 
                 incrementValue = table.incrementValue;
 
+                if(isDateField){
+                    var incrRefreshColFieldMap = connectionData.fieldsMap[connectionData.incrementalRefreshColumn];
+                    if(incrRefreshColFieldMap == null){
+                        return abort("Unable to find field: '" + connectionData.incrementalRefreshColumn + "'");
+                    }
+                    if(!incrRefreshColFieldMap.format){
+                        return abort("Unable to find datetime format for field: '" + connectionData.incrementalRefreshColumn + "'");
+                    }
+                    var format = incrRefreshColFieldMap.format.replace(new RegExp("y", "g"), "Y").replace(new RegExp("d", "g"), "D"); 
+                    format = format.split("||")[0];       
+                    
+                    if (connectionData.allDatesAsLocalTime) {
+                        incrementValue = moment(incrementValue.replace(' +', '+').replace(' -', '-'));
+                    } 
+                    else {
+                        // Parse as UTC time
+                        incrementValue = moment.utc(incrementValue.replace(' +', '+').replace(' -', '-'));
+                    }
+                    incrementValue = incrementValue.format(format);
+
+                    console.log("[openSearchScrollWindow] Formatted incremental refresh column vvalue: , format: ", incrementValue, format)
+                }
+
                 var filter = { range: {} };
                 filter.range[connectionData.incrementalRefreshColumn] = { "gt": incrementValue };
 
@@ -902,25 +906,8 @@ var elasticsearchConnector = (function () {
 
                     fieldName = toSafeTableauFieldName(field.name);
 
-                    // Dont overwrite previously stored value for raw incremental column
-                    if(connectionData.useIncrementalRefresh && fieldName == connectionData.rawIncrementalRefreshColumn){
-                        return;
-                    }
-
                     var fieldValue = getDeeplyNestedValue(hits[ii]._source, field.name);
                     item[fieldName] = _.isNull(fieldValue) || _.isUndefined(fieldValue) ? null : fieldValue;
-
-                    // Store the raw value from Elasticsearch to use in incremental refreshes
-                    if(connectionData.useIncrementalRefresh && fieldName == connectionData.incrementalRefreshColumn){
-                        val = null;
-                        if (_.isArray(item[fieldName])) {
-                            val = item[fieldName][0]
-                        }
-                        else {
-                            val = item[fieldName]
-                        }
-                        item[connectionData.rawIncrementalRefreshColumn] = val;
-                    }
 
                 });
 
@@ -960,9 +947,9 @@ var elasticsearchConnector = (function () {
                     }
 
                     var format = 'YYYY-MM-DD HH:mm:ss';
-                    if (connectionData.includeMilliseconds) {
+                   // if (connectionData.includeMilliseconds) {
                         format = format + ".SSS";
-                    }
+                   // }
 
                     item[fieldName] = item[fieldName].format(format);
 
