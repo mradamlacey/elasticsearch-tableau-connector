@@ -723,7 +723,7 @@ var elasticsearchConnector = (function () {
                     }
                     incrementValue = incrementValue.format(format);
 
-                    console.log("[openSearchScrollWindow] Formatted incremental refresh column vvalue: , format: ", incrementValue, format)
+                    console.log("[openSearchScrollWindow] Formatted incremental refresh column value, format:", incrementValue, format)
                 }
 
                 var filter = { range: {} };
