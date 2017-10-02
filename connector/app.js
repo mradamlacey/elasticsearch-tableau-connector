@@ -430,6 +430,7 @@ var app = (function () {
 
                     _.each(indices, function (index) {
 
+                        // If the index is an alias, then only return types part of the selected index alias filter
                         var isAlias = _.find(self.aliases(), function(alias){
                             return alias == self.elasticsearchIndex();
                         });
@@ -845,10 +846,23 @@ var app = (function () {
 
     vm.elasticsearchIndex.subscribe(function (newValue) {
 
-        var isAlias = _.find(vm.aliases(), function(alias){
-            return alias == newValue;
-        });
-        vm.selectedAliasForIndex(isAlias ? true : false);
+        if (vm.aliases().length == 0) {
+            vm.getElasticsearchAliases(function (err, aliases) {
+                var uniqueAliasList = (_.uniq(aliases));
+                vm.aliases(uniqueAliasList);
+
+                var isAlias = _.find(vm.aliases(), function(alias){
+                    return alias == newValue;
+                });
+                vm.selectedAliasForIndex(isAlias ? true : false);
+            });
+        }
+        else{
+            var isAlias = _.find(vm.aliases(), function(alias){
+                return alias == newValue;
+            });
+            vm.selectedAliasForIndex(isAlias ? true : false);
+        }
 
         vm.elasticsearchAliasIndex("");
         vm.elasticsearchType("");
