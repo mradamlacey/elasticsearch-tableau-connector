@@ -81,6 +81,19 @@
                     </input>
 
                 </div>
+                <div class="form-group required" data-bind="visible: selectedAliasForIndex, css: { 'has-error': validation().elasticsearchAliasIndex, 'has-feedback': validation().elasticsearchAliasIndex }">
+                    <label for="inputElasticsearchAliasIndexTypeahead">Index Filter for Type Selection</label>
+                    <i data-bind="bootstrapPopover" class="glyphicon glyphicon-info-sign" data-toggle="popover" data-trigger="hover" title="Index Filter for Type Selection"
+                        data-content="When choosing an alias for the index, this selection will filter types only from this index."></i>
+
+                    <input class="form-control" type="text" data-provide="typeahead" data-bind="typeahead, typeaheadSource: elasticsearchAliasIndexSource, value: elasticsearchAliasIndex"
+                        autocomplete="off" placeholder="Name of index within the alias to use for type selection">
+                    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" data-bind="visible: validation().elasticsearchAliasIndex"></span>
+                    <span class="sr-only" data-bind="if: validation().elasticsearchAliasIndex">(error)</span>
+                    <i class="index-icon glyphicon glyphicon-refresh icon-refresh-animate hide"></i>
+                    </input>
+
+                </div>
                 <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchType, 'has-feedback': validation().elasticsearchType }">
                     <label for="inputElasticsearchTypeTypeahead">Type</label>
                     <input class="form-control" type="text" data-provide="typeahead" data-bind="typeahead, typeaheadSource: elasticsearchTypeSource, value: elasticsearchType"
@@ -182,12 +195,12 @@
                         <label for="inputBatchSize">Incremental Refresh Column</label>
                         <select class="form-control" data-bind="options: incrementalRefreshColumns, value: incrementalRefreshColumn, optionsText: 'name', optionsValue: 'name'"></select>
                     </div>
-                    <!--
+<!--
                     <div class="form-group required" data-bind="visible: usingDateForIncrementalRefresh">
                         <label for="inputIncrementalRefreshColDateFormat">Date Format</label>
                         <input type="text" class="form-control" id="inputIncrementalRefreshColDateFormat" placeholder="Enter date format" data-bind="value: incrementalRefreshColDateFormat">
                     </div>
-                    -->
+                -->
 
                     <div class="form-group required">
                         <label for="inputBatchSize">Batch record size for each response</label>
