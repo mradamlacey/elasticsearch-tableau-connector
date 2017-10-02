@@ -358,14 +358,17 @@ var elasticsearchConnector = (function () {
 
                     var indexName = connectionData.elasticsearchIndex;
 
-                    // Then we selected an alias... choose the last index with a matching type name
-                    // TODO: Let user choose which type from which index
+                    // Then we selected an alias... the actual index we use will be from the alias index filter selection
                     if (data[connectionData.elasticsearchIndex] == null) {
-                        _.forIn(data, function (index, indexKey) {
-                            if (index.mappings[connectionData.elasticsearchType]) {
-                                indexName = indexKey;
-                            }
-                        });
+                        indexName = connectionData.elasticsearchAliasIndex;
+                        // Backwards compatibility where alias was not previously selected, use the last of all the alias' indices
+                        if(!indexName){
+                            _.forIn(data, function (index, indexKey) {
+                                if (index.mappings[connectionData.elasticsearchType]) {
+                                    indexName = indexKey;
+                                }
+                            });
+                        }
                     }
 
                     var errMsg = null;

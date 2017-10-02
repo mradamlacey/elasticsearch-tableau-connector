@@ -11,6 +11,10 @@ var app = (function () {
         self.password = ko.observable();
         self.elasticsearchUrl = ko.observable();
         self.elasticsearchIndex = ko.observable();
+        self.elasticsearchAliasIndex = ko.observable();
+
+        self.aliases = ko.observable([]);
+        self.selectedAliasForIndex = ko.observable(false);
 
         self.overrideFieldDefaults = ko.observable(false);
         self.allDatesAsLocalTime = ko.observable(false);
@@ -189,12 +193,40 @@ var app = (function () {
                     if (err) {
                         return self.abort(err);
                     }
-                    var sourceData = indices.concat(_.uniq(aliases));
+                    var uniqueAliasList = (_.uniq(aliases));
+                    var sourceData = indices.concat(uniqueAliasList);
+
+                    self.aliases(uniqueAliasList);
 
                     // Return the actual list of items to the control
                     cb(sourceData);
                 });
 
+            });
+        };
+
+        self.elasticsearchAliasIndexSource = function (something, cb) {
+
+            $('.index-icon').toggleClass('hide');
+
+            self.getElasticsearchRawAliases(function (err, aliases) {
+
+                $('.index-icon').toggleClass('hide');
+
+                if (err) {
+                    return self.abort(err);
+                }
+
+                sourceData = [];
+
+                _.forEach(aliases, function(indexAliases, indexName) {
+                    if(indexAliases.aliases[self.elasticsearchIndex()]){
+                        sourceData = sourceData.concat(indexName);
+                    }
+                });
+
+                // Return the actual list of items to the control
+                cb(sourceData);
             });
         };
 
@@ -238,6 +270,7 @@ var app = (function () {
                 elasticsearchUsername: self.username(),
                 elasticsearchPassword: self.password(),
                 elasticsearchIndex: self.elasticsearchIndex(),
+                elasticsearchAliasIndex: self.elasticsearchAliasIndex(),
                 elasticsearchType: self.elasticsearchType(),
                 overrideFieldDefaults: self.overrideFieldDefaults(),
                 allDatesAsLocalTime: self.allDatesAsLocalTime(),
@@ -396,8 +429,16 @@ var app = (function () {
                     var esTypes = [];
 
                     _.each(indices, function (index) {
-                        var types = _.keys(data[index].mappings);
 
+                        // If the index is an alias, then only return types part of the selected index alias filter
+                        var isAlias = _.find(self.aliases(), function(alias){
+                            return alias == self.elasticsearchIndex();
+                        });
+                        if(isAlias && index != self.elasticsearchAliasIndex()){
+                            return;
+                        }
+
+                        var types = _.keys(data[index].mappings);
                         esTypes = esTypes.concat(types);
                     });
 
@@ -502,6 +543,46 @@ var app = (function () {
                 }
             });
         };
+
+        self.getElasticsearchRawAliases = function (cb) {
+            
+                        var connectionData = tableauData.getUnwrapped();
+            
+                        if (!connectionData) {
+                            console.log("[App] getElasticsearchIndices - no connection data, nothing to do");
+                            return;
+                        }
+                        if (!connectionData.elasticsearchUrl) {
+                            console.log("[App] getElasticsearchIndices - no Elasticsearch URL, nothing to do");
+                            return;
+                        }
+            
+                        var connectionUrl = connectionData.elasticsearchUrl + '/_aliases';
+            
+                        var xhr = $.ajax({
+                            url: connectionUrl,
+                            method: 'GET',
+                            contentType: 'application/json',
+                            dataType: 'json',
+                            beforeSend: function (xhr) {
+                                _beforeSendAddAuthHeader(xhr, connectionData);
+                            },
+                            success: function (data) {
+            
+                                self.errorMessage("");
+            
+                                cb(null, data);
+                            },
+                            error: function (xhr, ajaxOptions, err) {
+                                if (xhr.status == 0) {
+                                    cb('Unable to get Elasticsearch aliases, unable to connect to host or CORS request was denied');
+                                }
+                                else {
+                                    cb("Unable to get Elasticsearch aliases, status code:  " + xhr.status + '; ' + xhr.responseText + "\n" + err);
+                                }
+                            }
+                        });
+                    };
 
         self.getElasticsearchFieldData = function (cb, initialLoad) {
             var messages = [];
@@ -609,6 +690,18 @@ var app = (function () {
             }
             else {
                 validation.elasticsearchIndex = false;
+            }
+
+            var isAlias = _.find(self.aliases(), function(alias){
+                return alias == self.elasticsearchIndex();
+            });
+            
+            if (isAlias && !self.elasticsearchAliasIndex()) {
+                validation.messages.push("Elasticsearch Alias Index is required");
+                validation.elasticsearchAliasIndex = true
+            }
+            else {
+                validation.elasticsearchAliasIndex = false;
             }
 
             if (!self.elasticsearchType()) {
@@ -739,6 +832,7 @@ var app = (function () {
     vm.elasticsearchUrl.subscribe(function (newValue) {
 
         vm.elasticsearchIndex("");
+        vm.elasticsearchAliasIndex("");
         vm.elasticsearchType("");
 
         vm.previewFields.removeAll();
@@ -751,6 +845,46 @@ var app = (function () {
     });
 
     vm.elasticsearchIndex.subscribe(function (newValue) {
+
+        if (vm.aliases().length == 0) {
+            vm.getElasticsearchAliases(function (err, aliases) {
+                var uniqueAliasList = (_.uniq(aliases));
+                vm.aliases(uniqueAliasList);
+
+                var isAlias = _.find(vm.aliases(), function(alias){
+                    return alias == newValue;
+                });
+                vm.selectedAliasForIndex(isAlias ? true : false);
+            });
+        }
+        else{
+            var isAlias = _.find(vm.aliases(), function(alias){
+                return alias == newValue;
+            });
+            vm.selectedAliasForIndex(isAlias ? true : false);
+        }
+
+        vm.elasticsearchAliasIndex("");
+        vm.elasticsearchType("");
+
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
+
+        vm.aggregations.clear();
+        tableauData.updateProperties(vm.getTableauConnectionData());
+
+        vm.getElasticsearchFieldData(updateIncrementalRefreshColumns);
+    });
+
+    vm.selectedAliasForIndex.subscribe(function(newValue){
+
+        // If not using an alias for the index - then duplicate the value
+        if(!newValue){
+            vm.elasticsearchAliasIndex(vm.elasticsearchIndex());
+        }
+    });
+
+    vm.elasticsearchAliasIndex.subscribe(function (newValue) {
 
         vm.elasticsearchType("");
 
