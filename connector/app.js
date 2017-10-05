@@ -282,6 +282,7 @@ var app = (function () {
                 useSyncClientWorkaround: self.useSyncClientWorkaround(),
                 useIncrementalRefresh: self.useIncrementalRefresh(),
                 incrementalRefreshColumn: self.incrementalRefreshColumn(),
+                includeMilliseconds: self.includeMilliseconds(),
                 usingDateForIncrementalRefresh: self.usingDateForIncrementalRefresh(),
                 incrementalRefreshColDateFormat: self.incrementalRefreshColDateFormat(),
                 batchSize: self.batchSize(),
