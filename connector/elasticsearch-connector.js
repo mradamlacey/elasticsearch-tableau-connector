@@ -712,7 +712,11 @@ var elasticsearchConnector = (function () {
                         return abort("Unable to find field: '" + connectionData.incrementalRefreshColumn + "'");
                     }
                     if(!incrRefreshColFieldMap.format){
-                        return abort("Unable to find datetime format for field: '" + connectionData.incrementalRefreshColumn + "'");
+                        // Use default format of 'strict_date_optional_time'
+                        incrRefreshColFieldMap.format = "YYYY-MM-DDTHH:mm:ss";
+                        if(connectionData.includeMilliseconds){
+                            incrRefreshColFieldMap.format = incrRefreshColFieldMap.format + ".SSS";
+                        }
                     }
                     var format = incrRefreshColFieldMap.format.replace(new RegExp("y", "g"), "Y").replace(new RegExp("d", "g"), "D"); 
                     format = format.split("||")[0];       
