@@ -409,7 +409,7 @@ var app = (function () {
                 return;
             }
 
-            var connectionUrl = connectionData.elasticsearchUrl + '/' + indexName + '/_mapping';
+            var connectionUrl = connectionData.elasticsearchUrl.replace(/\/$/, "") + '/' + indexName + '/_mapping';
 
             var xhr = $.ajax({
                 url: connectionUrl,
@@ -468,7 +468,7 @@ var app = (function () {
                 return;
             }
 
-            var connectionUrl = connectionData.elasticsearchUrl + '/_mapping';
+            var connectionUrl = connectionData.elasticsearchUrl.replace(/\/$/, "") + '/_mapping';
 
             var xhr = $.ajax({
                 url: connectionUrl,
@@ -510,7 +510,7 @@ var app = (function () {
                 return;
             }
 
-            var connectionUrl = connectionData.elasticsearchUrl + '/_aliases';
+            var connectionUrl = connectionData.elasticsearchUrl.replace(/\/$/, "") + '/_aliases';
 
             var xhr = $.ajax({
                 url: connectionUrl,
@@ -557,7 +557,7 @@ var app = (function () {
                             return;
                         }
             
-                        var connectionUrl = connectionData.elasticsearchUrl + '/_aliases';
+                        var connectionUrl = connectionData.elasticsearchUrl.replace(/\/$/, "") + '/_aliases';
             
                         var xhr = $.ajax({
                             url: connectionUrl,
