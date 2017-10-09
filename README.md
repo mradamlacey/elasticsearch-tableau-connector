@@ -20,7 +20,7 @@ number of hits.  The user can override the batch size to retrieve more records p
 
 # Compatibility
 
-The 2.2 release (in the `release-2.3` branch and current development version in `master`) supports **Tableau 10.4 or later**.
+The 2.3 release (in the `release-2.3` branch and current development version in `master`) supports **Tableau 10.4 or later**.
 
 The 2.0 release (in the `release-2.0` branch and current development version in `master`) supports **Tableau 10.0 or later**.
 
