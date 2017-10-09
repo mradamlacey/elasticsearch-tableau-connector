@@ -811,7 +811,10 @@ var elasticsearchConnector = (function () {
                 if (result.more) {
                     getRemainingScrollResults(tableauDataMode, table, result.scrollId, function (err, innerResult) {
 
-                        console.log("[getRemainingScrollResults] In callback of handling more results, adding " + innerResult.numProcessed + " to running total of: " + result.numProcessed);
+                        console.log("[getRemainingScrollResults] In callback of handling more results, adding " + result.numProcessed + " to running total of: " + innerResult.numProcessed);
+                        
+                        tableau.reportProgress("Processing " + result.numProcessed + " result(s) to running total of: " + innerResult.numProcessed);
+
                         innerResult.numProcessed += result.numProcessed;
                         // If collecting results for preview mode (and not Tableau data gather mode) - store the entire retrieved result set
                         if(!tableauDataMode){

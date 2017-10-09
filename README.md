@@ -26,6 +26,8 @@ The 2.0 release (in the `release-2.0` branch and current development version in 
 
 The 1.0 release (in the `release-1.0` branch) supports **Tableau 9.1.6 or later, 9.2.4 or later, and 9.3**.
 
+> Elasticsearch 5.+ is recommended
+
 # Known Issues and Limitations
 
 - Fields with `array` values will have the value from the first element used, otherwise the entire array will be passed as a value (which probably will not display in Tableau
