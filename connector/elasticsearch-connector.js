@@ -335,10 +335,6 @@ var elasticsearchConnector = (function () {
 
     };
 
-    var getUnionFieldsFromTypesAcrossIndices = function(connectionData, cb){
-
-    };
-
     var getElasticsearchConnectionFieldInfo = function (connectionData, cb) {
 
         elasticsearchFields = [];
@@ -349,13 +345,6 @@ var elasticsearchConnector = (function () {
 
         switch (connectionData.elasticsearchResultMode) {
             case "search":
-
-
-                // Actually retrieve mappings for the selected type across all indexes for the alias
-                // and union the fields together
-                if(connectionData.elasticsearchAliasIndex && connectionData.elasticsearchUnionAliasTypes){
-
-                }
 
                 // Retrieve the Elasticsearch mapping before we call tableau submit
                 getElasticsearchTypeMapping(connectionData, function (err, data, connectionData) {
