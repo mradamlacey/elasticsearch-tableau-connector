@@ -145,6 +145,18 @@ var elasticsearchConnector = (function () {
         }
 
     }
+        
+            function abort(errorMessage, kill) {
+        
+                toastr.error(errorMessage);
+        
+                console.error(errorMessage);
+                if (kill) {
+                    console.error('[ElasticsearchConnector] - calling tableau abort');
+                    tableau.abortWithError(errorMessage);
+                }
+        
+            }
 
     //
     // Connector definition
@@ -323,6 +335,10 @@ var elasticsearchConnector = (function () {
 
     };
 
+    var getUnionFieldsFromTypesAcrossIndices = function(connectionData, cb){
+
+    };
+
     var getElasticsearchConnectionFieldInfo = function (connectionData, cb) {
 
         elasticsearchFields = [];
@@ -333,6 +349,14 @@ var elasticsearchConnector = (function () {
 
         switch (connectionData.elasticsearchResultMode) {
             case "search":
+
+
+                // Actually retrieve mappings for the selected type across all indexes for the alias
+                // and union the fields together
+                if(connectionData.elasticsearchAliasIndex && connectionData.elasticsearchUnionAliasTypes){
+
+                }
+
                 // Retrieve the Elasticsearch mapping before we call tableau submit
                 getElasticsearchTypeMapping(connectionData, function (err, data, connectionData) {
 
@@ -360,15 +384,41 @@ var elasticsearchConnector = (function () {
 
                     // Then we selected an alias... the actual index we use will be from the alias index filter selection
                     if (data[connectionData.elasticsearchIndex] == null) {
-                        indexName = connectionData.elasticsearchAliasIndex;
-                        // Backwards compatibility where alias was not previously selected, use the last of all the alias' indices
-                        if(!indexName){
-                            _.forIn(data, function (index, indexKey) {
-                                if (index.mappings[connectionData.elasticsearchType]) {
-                                    indexName = indexKey;
+
+                        if(connectionData.elasticsearchUnionAliasTypes){
+
+                            mappingData = { mappings: {} };
+                            mappingData.mappings[connectionData.elasticsearchType] = { properties: {} };
+
+                            _.forIn(data, function(index, indexKey){
+                                if(index.mappings[connectionData.elasticsearchType]){
+
+                                    var mapping = index.mappings[connectionData.elasticsearchType];
+                                    _.forEach(mapping.properties, function(propertyData, propertyName){
+                                        mappingData.mappings[connectionData.elasticsearchType].properties[propertyName] = propertyData;
+                                    });
+
                                 }
+
                             });
+
+                            console.log("[getElasticsearchConnectionFieldInfo] Unioned type from types in alias index: ", mappingData);
+                            // Update the response to match the processing later on
+                            data[indexName] = mappingData;
+
                         }
+                        else{
+                            indexName = connectionData.elasticsearchAliasIndex;
+                            // Backwards compatibility where alias was not previously selected, use the last of all the alias' indices
+                            if(!indexName){
+                                _.forIn(data, function (index, indexKey) {
+                                    if (index.mappings[connectionData.elasticsearchType]) {
+                                        indexName = indexKey;
+                                    }
+                                });
+                            }
+                        }
+         
                     }
 
                     var errMsg = null;
@@ -860,9 +910,14 @@ var elasticsearchConnector = (function () {
             var toRet = [];
 
             var hitsToProcess = hits.length;
+
+            console.log('[processSearchResults] search hits: ' + hitsToProcess);
+
             if (connectionData.limit && (totalCount + hits.length > connectionData.limit)) {
                 hitsToProcess = connectionData.limit - totalCount;
             }
+
+            console.log('[processSearchResults] hits to process: ' + hitsToProcess + ", search hits: " + hits.length);
 
             var assignFieldValue = function (currentRow, name, obj) {
                 var objKeys = _.keys(obj),
