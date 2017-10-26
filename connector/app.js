@@ -12,6 +12,7 @@ var app = (function () {
         self.elasticsearchUrl = ko.observable();
         self.elasticsearchIndex = ko.observable();
         self.elasticsearchAliasIndex = ko.observable();
+        self.elasticsearchUnionAliasTypes = ko.observable(false);
 
         self.aliases = ko.observable([]);
         self.selectedAliasForIndex = ko.observable(false);
@@ -271,6 +272,7 @@ var app = (function () {
                 elasticsearchPassword: self.password(),
                 elasticsearchIndex: self.elasticsearchIndex(),
                 elasticsearchAliasIndex: self.elasticsearchAliasIndex(),
+                elasticsearchUnionAliasTypes: self.elasticsearchUnionAliasTypes(),
                 elasticsearchType: self.elasticsearchType(),
                 overrideFieldDefaults: self.overrideFieldDefaults(),
                 allDatesAsLocalTime: self.allDatesAsLocalTime(),
@@ -834,6 +836,7 @@ var app = (function () {
 
         vm.elasticsearchIndex("");
         vm.elasticsearchAliasIndex("");
+        vm.elasticsearchUnionAliasTypes(false);
         vm.elasticsearchType("");
 
         vm.previewFields.removeAll();
@@ -866,6 +869,7 @@ var app = (function () {
         }
 
         vm.elasticsearchAliasIndex("");
+        vm.elasticsearchUnionAliasTypes(false);
         vm.elasticsearchType("");
 
         vm.previewFields.removeAll();
@@ -888,6 +892,17 @@ var app = (function () {
     vm.elasticsearchAliasIndex.subscribe(function (newValue) {
 
         vm.elasticsearchType("");
+
+        vm.previewFields.removeAll();
+        vm.previewData.removeAll();
+
+        vm.aggregations.clear();
+        tableauData.updateProperties(vm.getTableauConnectionData());
+
+        vm.getElasticsearchFieldData(updateIncrementalRefreshColumns);
+    });
+
+    vm.elasticsearchUnionAliasTypes.subscribe(function (newValue) {
 
         vm.previewFields.removeAll();
         vm.previewData.removeAll();

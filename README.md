@@ -226,6 +226,7 @@ The Elasticsearch connector UI includes the following fields:
 | Password | String | If 'Use HTTP Basic Auth' is checked, this is the password |
 | Index name | String | \[Required\] Name of the index in the Elasticsearch cluster |
 | Index Filter for Type Selection | String | If the index selected is an alias, this selection is required to choose the index to filter types by.  Only types from this selection will be available in the 'Type' selection |
+| Use fields for type from all indexes? | Boolean | If selected, then fields in the extract will be a union of all fields of the selected type across all indexes of the alias.  Note this only applies when selecting an index alias.  Defaults to false |
 | Type | String | \[Required\] Name of the type in the Elasticsearch cluster to query |
 | Override Field Defaults | Boolean | If selected, then additional options to override default handling of fields is available |
 | Parse date fields in local time? | Boolean | If selected then all date or timestamp fields will be parsed in local time, the default (unselected) will parse as UTC |
