@@ -145,18 +145,6 @@ var elasticsearchConnector = (function () {
         }
 
     }
-        
-            function abort(errorMessage, kill) {
-        
-                toastr.error(errorMessage);
-        
-                console.error(errorMessage);
-                if (kill) {
-                    console.error('[ElasticsearchConnector] - calling tableau abort');
-                    tableau.abortWithError(errorMessage);
-                }
-        
-            }
 
     //
     // Connector definition
