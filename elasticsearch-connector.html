@@ -81,6 +81,7 @@
                     </input>
 
                 </div>
+                
                 <div class="form-group required" data-bind="visible: selectedAliasForIndex, css: { 'has-error': validation().elasticsearchAliasIndex, 'has-feedback': validation().elasticsearchAliasIndex }">
                     <label for="inputElasticsearchAliasIndexTypeahead">Index Filter for Type Selection</label>
                     <i data-bind="bootstrapPopover" class="glyphicon glyphicon-info-sign" data-toggle="popover" data-trigger="hover" title="Index Filter for Type Selection"
@@ -94,6 +95,18 @@
                     </input>
 
                 </div>
+
+                <div class="form-group required" data-bind="visible: selectedAliasForIndex, css: { 'has-error': validation().elasticsearchUnionAliasTypes, 'has-feedback': validation().elasticsearchUnionAliasTypes }">
+                    
+                     <input id="cbElasticsearchUnionAliasTypes" type="checkbox" data-bind="checked: elasticsearchUnionAliasTypes">Use fields for type from all indexes?
+                     <i data-bind="bootstrapPopover" 
+                        class="glyphicon glyphicon-info-sign" 
+                        data-toggle="popover" data-trigger="hover" 
+                        title="Use fields for type from all indexes?" 
+                        data-content="When checked, a union of all fields from all indexes in the alias for the chosen type will be used in the extract result set."></i>
+             
+                </div>
+
                 <div class="form-group required" data-bind="css: { 'has-error': validation().elasticsearchType, 'has-feedback': validation().elasticsearchType }">
                     <label for="inputElasticsearchTypeTypeahead">Type</label>
                     <input class="form-control" type="text" data-provide="typeahead" data-bind="typeahead, typeaheadSource: elasticsearchTypeSource, value: elasticsearchType"
