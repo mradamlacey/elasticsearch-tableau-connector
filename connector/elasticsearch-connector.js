@@ -877,6 +877,14 @@ var elasticsearchConnector = (function () {
     var processSearchResults = function (tableauDataMode, table, data) {
 
         var connectionData = JSON.parse(tableau.connectionData);
+
+        // Scroll may have timed-out or otherwise may not be available anymore
+        if(!data.hits){
+            log.info("[processSearchResults] - error in retrieving scroll results, response", JSON.stringify(data));
+            abortWithError("Error in retrieving scroll results");
+            return {results: [], scrollId: null, numProcessed: 0, more: false}
+        }
+
         searchHitsTotal = data.hits.total;
 
         console.log('[processSearchResults] total search hits: ' + searchHitsTotal);
