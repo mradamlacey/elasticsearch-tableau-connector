@@ -5,3 +5,4 @@ public/
 dist/
 dist-tmp/
 .idea/
+package-lock.json
