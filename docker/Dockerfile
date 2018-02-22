@@ -1,13 +1,8 @@
-FROM ubuntu:14.04
+FROM node:8.9.4-alpine
 
-RUN apt-get update && \
-	apt-get install -y \
-							curl \
-							git
-
-RUN curl -sL https://deb.nodesource.com/setup | bash -
-
-RUN apt-get install -y nodejs
+RUN apk update && \
+    apk upgrade && \
+    apk add git
 
 RUN npm install -g grunt-cli bower && \
 	git config --global url."https://".insteadOf git://
@@ -24,4 +19,4 @@ WORKDIR "/usr/local/elasticsearch-tableau-connector"
 
 EXPOSE 3000
 
-CMD ["/usr/bin/nodejs", "index.js"]
+CMD ["node", "index.js"]
