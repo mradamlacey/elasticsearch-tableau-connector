@@ -135,7 +135,7 @@ docker build docker -t <name of tag>
 and can then start a container, which will map the server to the host's port 3000 from this image with:
 
 ```
-docker run <name of tag> -p 3000:3000
+docker run -p 3000:3000 <name of tag>
 ```
 ## Running as a Windows service
 
